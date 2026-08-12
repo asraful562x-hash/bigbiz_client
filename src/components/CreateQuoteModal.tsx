@@ -90,7 +90,7 @@ export const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Custom AI Software Integration & Support"
+                placeholder="e.g. Custom Enterprise Software Integration & Support"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               />
             </div>

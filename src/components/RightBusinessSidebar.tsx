@@ -52,7 +52,7 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
 
   // Live activity stream mock items
   const liveEscrowDeals = [
-    { id: '1', buyer: 'TechFlow Corp', amount: '$12,500', item: 'AI SaaS Source Code', time: '2m ago' },
+    { id: '1', buyer: 'TechFlow Corp', amount: '$12,500', item: 'SaaS Platform Source Code', time: '2m ago' },
     { id: '2', buyer: 'Nexus Logistics', amount: '$4,800', item: 'Wholesale Electronics Bulk', time: '8m ago' },
     { id: '3', buyer: 'Alpha Ventures', amount: '$3,200', item: 'Enterprise ERP License', time: '14m ago' },
   ];

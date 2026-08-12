@@ -1,0 +1,3 @@
+module.exports=[33290,a=>{"use strict";var b=a.i(7997);a.s(["default",0,function({children:a}){return(0,b.jsx)("html",{lang:"en",suppressHydrationWarning:!0,children:(0,b.jsx)("body",{className:"antialiased bg-slate-100/70 text-slate-900 font-sans min-h-screen",suppressHydrationWarning:!0,children:a})})},"metadata",0,{title:"BizSocial - Business Social Media & Commerce Ecosystem",description:"The all-in-one business social platform for product selling, software SaaS licensing, services marketplace & B2B procurement."}])},70864,function(a){a.n(a.i(33290))}];
+
+//# sourceMappingURL=app_layout_tsx_2144vk_._.js.map
