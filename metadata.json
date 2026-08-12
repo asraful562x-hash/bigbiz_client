@@ -1,0 +1,6 @@
+{
+  "name": "BizSocial Marketplace",
+  "description": "Multi-category social marketplace for small businesses featuring e-commerce listings, interactive social feeds, seller tiers, and a 'Sell to Us' direct offer system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

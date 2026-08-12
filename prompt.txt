@@ -1,0 +1,142 @@
+You are helping develop a Next.js 16.3 web application called **BizSocial** — a Social E-Commerce & B2B Hub platform.
+
+=== PROJECT ROOT ===
+E:\project\new_project\
+
+=== TECH STACK ===
+- Framework: Next.js 16.3.0 with Turbopack
+- Language: TypeScript + React 18
+- Styling: Tailwind CSS (utility-first, NO inline styles, NO CSS modules)
+- Icons: lucide-react
+- State: React useState only (no Redux, no Zustand)
+- Data: In-memory mock data only (no real API), all in src/data/mockData.ts
+- Build: npm run build | Dev: npm run dev
+
+=== FILE STRUCTURE ===
+src/
+  App.tsx                    ← Root component. All global state lives here. Main layout grid.
+  main.tsx                   ← React entry point
+  index.css                  ← Global styles (custom scrollbar: "sidebar-scroll" class)
+  types.ts                   ← ALL TypeScript interfaces (User, Listing, Post, Order, etc.)
+  data/mockData.ts           ← All seed data (INITIAL_USERS, INITIAL_LISTINGS, etc.)
+  hooks/useScrollOverflow.ts ← Custom scroll detection hook
+  components/
+    Header.tsx               ← Top nav: logo, search, tabs, drawer triggers, notifications
+    LoginPage.tsx            ← Auth page: sign in + register + demo accounts
+    LeftBusinessSidebar.tsx  ← Left panel: user profile, quick tools, B2B actions
+    RightBusinessSidebar.tsx ← Right panel: live RFQs, market insights, trending
+    MobileBottomNav.tsx      ← Bottom nav bar (mobile only)
+    RoleSwitcher.tsx         ← Switch active user role
+    FeedView.tsx             ← Social feed: posts, stories, listing cards
+    MarketplaceView.tsx      ← Product/service catalog with filters
+    SellerDashboard.tsx      ← Seller: analytics, listings, earnings
+    ProcurementDashboard.tsx ← B2B procurement officer panel
+    AdminDashboard.tsx       ← Admin: disputes, users, moderation
+    OrdersView.tsx           ← Order tracking (escrow status)
+    SellToUsTracker.tsx      ← Track direct sell-to-us offers
+    SettingsPrivacyView.tsx  ← Account settings
+    HelpSupportView.tsx      ← Help center / FAQ
+    ListingDetailModal.tsx   ← Product detail + Escrow buy flow
+    SellerProfileModal.tsx   ← Public seller profile popup
+    CreateListingModal.tsx   ← New listing form
+    CreatePostModal.tsx      ← New social post form
+    CreateStoryModal.tsx     ← New story upload
+    CreateQuoteModal.tsx     ← New B2B quote/RFQ
+    SellToUsModal.tsx        ← Submit direct offer to platform
+    DirectMessagesModal.tsx  ← In-app chat & DMs
+    StoryViewModal.tsx       ← Fullscreen story viewer
+    SwitchAccountModal.tsx   ← Switch between accounts
+
+=== LAYOUT SYSTEM (App.tsx) ===
+3-tier responsive layout:
+
+< 881px (mobile):
+  - Single column, full width main content
+  - Left sidebar → slides out as LEFT DRAWER (triggered by ☰ in Header)
+  - Right sidebar → slides out as RIGHT DRAWER (triggered by SlidersHorizontal icon next to mobile search bar)
+  - Search bar breaks to full-width second row below header
+
+881px – 1299px (tablet):
+  - flex-row layout
+  - Main content: flex-1 min-w-0 (fills remaining width)
+  - Right sidebar: fixed width w-[400px] / min-[1100px]:w-[430px], shrink-0
+  - Left sidebar hidden (use left drawer)
+
+≥ 1300px (desktop):
+  - CSS grid: 10 columns total
+  - Left sidebar: col-span-3
+  - Main content: col-span-4
+  - Right sidebar: col-span-3
+
+=== DRAWER PATTERN ===
+Both drawers in App.tsx use:
+  - Fixed overlay backdrop: fixed inset-0 bg-slate-900/50 z-40
+  - Slide panel: fixed top-0 [left|right]-0 h-full z-50
+  - Transition: translate-x-0 (open) vs -translate-x-full / translate-x-full (closed)
+  - isInDrawer={true} prop → strips ALL rounded corners inside sidebar components
+
+=== HEADER LAYOUT (Header.tsx) ===
+> 880px: Logo + inline search bar + action icons in ONE row
+≤ 880px: Logo row on top | Full-width search bar + right drawer button in second row
+≤ 425px: "Social E-Commerce & B2B Hub" subtitle hidden
+Create button: Square icon-only (w-9 h-9 sm:w-10 sm:h-10), no text label
+
+=== NAVIGATION TABS (activeTab state) ===
+'feed'        → FeedView
+'marketplace' → MarketplaceView
+'seller'      → SellerDashboard
+'orders'      → OrdersView
+'sell_to_us'  → SellToUsTracker
+'procurement' → ProcurementDashboard
+'admin'       → AdminDashboard
+'settings'    → SettingsPrivacyView
+'help'        → HelpSupportView
+
+=== USER ROLES (types.ts) ===
+'buyer' | 'seller_free' | 'seller_premium' | 'admin' | 'moderator' | 'procurement'
+
+=== KEY TYPES ===
+User, Listing, Post, Story, DirectOffer, Order, Message, Conversation,
+AppNotification, Review, Dispute, AnalyticsData, MarketplaceCategory, ProductCondition
+
+=== MARKETPLACE CATEGORIES ===
+'new_products' | 'second_hand' | 'services' | 'rentals' | 'wholesale_b2b'
+
+=== ESCROW BUY FLOW ===
+1. User opens ListingDetailModal → clicks "Buy Now via Escrow"
+2. Checkout sub-modal opens inside ListingDetailModal
+3. User enters shipping address → confirms → onBuyNow(listing, shippingAddress) called
+4. Order created with status: 'escrow_held', escrowStatus: 'held'
+5. Tracked in OrdersView
+
+=== isInDrawer PROP PATTERN ===
+<LeftBusinessSidebar isInDrawer={true} />   ← strips rounded corners
+<RightBusinessSidebar isInDrawer={true} />  ← strips rounded corners
+Pattern: const card = isInDrawer ? 'rounded-none' : 'rounded-3xl';
+
+=== CUSTOM CSS CLASSES ===
+.sidebar-scroll  → Custom scrollbar style (defined in index.css)
+
+=== IMPORTANT RULES ===
+1. ALWAYS run: npm run build after changes to verify no TypeScript/build errors
+2. All state is in App.tsx — pass as props down to components
+3. No API calls — use/extend mockData.ts for data
+4. Tailwind only for styling — no inline styles
+5. Use min-[Xpx]: syntax for custom breakpoints (e.g., min-[881px]:, min-[1300px]:)
+6. For text overflow in flex rows: add truncate + min-w-0 to container + shrink-0 to badges
+7. All modals: fixed inset-0 z-50 + overflow-y-auto outer + min-h-full inner wrapper for mobile scroll
+8. Next.js 16 may have breaking API changes — read node_modules/next/dist/docs/ before using new Next.js features
+
+=== DEMO ACCOUNTS (mockData.ts → INITIAL_USERS) ===
+Index 0: Buyer
+Index 1: Seller Free
+Index 2: Seller Premium (default demo)
+Index 3: Admin
+Index 4: Procurement Officer
+Index 5: Moderator
+
+=== COMMON PITFALLS ===
+- Right sidebar squishing: use shrink-0 + fixed pixel width, NOT grid fractions
+- Modal clipped on mobile: outer overlay needs overflow-y-auto + flex items-start justify-center py-6
+- Drawer conflict: Left drawer breakpoint = 1300px | Right drawer breakpoint = 881px
+- Search bar + drawer button height mismatch: use h-10 on both + items-stretch on parent flex
