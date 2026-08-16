@@ -99,12 +99,18 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                 {isBuyer && order.escrowStatus === 'held' && (
                   <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-emerald-50 p-3.5 rounded-2xl">
                     <div className="text-xs text-emerald-900 space-y-0.5">
-                      <span className="font-bold block">Received your item?</span>
-                      Confirming receipt will release the ${order.price.toFixed(2)} payment to {order.sellerName}.
+                      <span className="font-bold block">Received your item / deliverables?</span>
+                      Confirming receipt will release the ${order.totalAmount ? order.totalAmount.toFixed(2) : order.price.toFixed(2)} payment from Escrow to {order.sellerName}.
                     </div>
                     <button
-                      onClick={() => onConfirmReceipt(order.id)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl shadow-xs transition-transform active:scale-95 shrink-0 w-full sm:w-auto text-center"
+                      onClick={() => {
+                        if (onConfirmReceipt) {
+                          onConfirmReceipt(order.id);
+                        } else if (onUpdateOrderStatus) {
+                          onUpdateOrderStatus(order.id, 'buyer_confirmed', 'released');
+                        }
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl shadow-xs transition-transform active:scale-95 shrink-0 w-full sm:w-auto text-center cursor-pointer"
                     >
                       Confirm Receipt & Release Escrow
                     </button>

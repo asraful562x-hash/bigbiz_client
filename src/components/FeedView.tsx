@@ -261,12 +261,27 @@ export const FeedView: React.FC<FeedViewProps> = ({
                     className="w-10 h-10 rounded-full object-cover border border-slate-200 group-hover:opacity-90 shrink-0"
                   />
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
                         {post.sellerName}
                       </span>
                       {post.isVerifiedSeller && (
                         <CheckCircle2 className="w-4 h-4 text-sky-500 fill-sky-50 shrink-0" />
+                      )}
+                      {post.postType === 'deal' && (
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                          🔥 Flash Deal
+                        </span>
+                      )}
+                      {post.postType === 'wholesale' && (
+                        <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                          📦 Wholesale Lot
+                        </span>
+                      )}
+                      {post.postType === 'product' && (
+                        <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                          🛍️ Product Launch
+                        </span>
                       )}
                     </div>
                     <span className="text-xs text-slate-400 block truncate">{post.createdAt}</span>
@@ -277,6 +292,14 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <MoreHorizontal className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Promotional Badge Banner (if present) */}
+              {post.promoBadge && (
+                <div className="mx-4 mb-2 bg-gradient-to-r from-amber-500/10 via-amber-400/20 to-amber-500/10 border border-amber-300 text-amber-900 font-extrabold text-xs px-3 py-1.5 rounded-xl flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>{post.promoBadge}</span>
+                </div>
+              )}
 
               {/* Post Content */}
               <div className="px-4 pb-3">

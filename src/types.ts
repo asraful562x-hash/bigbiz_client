@@ -1,4 +1,6 @@
 export type UserRole = 
+  | 'buyer_free'
+  | 'buyer_premium'
   | 'buyer' 
   | 'seller_free' 
   | 'seller_premium' 
@@ -39,6 +41,43 @@ export interface User {
   trustScore?: number;
   responseRate?: string;
   joinDate?: string;
+  customCategories?: string[];
+}
+
+export interface ProductOptionItem {
+  id: string;
+  name: string;
+  priceDelta: number; // 0 for non-priceable / included, >0 for extra charge, <0 for discount
+  description?: string;
+  inStock?: boolean;
+  isDefault?: boolean; // Seller wants this selected by default
+}
+
+export interface ProductOptionSection {
+  id: string;
+  title: string; // e.g. "Pizza Size", "Crust Type", "Cheese / Extra Toppings", "Beverage Choice"
+  type: 'single' | 'multiple'; // 'single' (radio/pill: choose 1) or 'multiple' (checkboxes: pick many)
+  isRequired?: boolean; // Must select at least 1
+  minSelections?: number;
+  maxSelections?: number;
+  items: ProductOptionItem[];
+}
+
+export interface ProductVariant {
+  id: string;
+  name: string;
+  priceDelta?: number; // 0 if same price, or positive/negative offset
+  sku?: string;
+  stockQty?: number;
+  inStock?: boolean;
+  isDefault?: boolean;
+}
+
+export interface ProductFeature {
+  id: string;
+  name: string;
+  price: number; // additional price added when selected
+  description?: string;
 }
 
 export interface Listing {
@@ -46,9 +85,13 @@ export interface Listing {
   title: string;
   description: string;
   category: MarketplaceCategory;
+  storeCategory?: string;
   condition: ProductCondition;
   price: number;
   originalPrice?: number;
+  variants?: ProductVariant[];
+  features?: ProductFeature[];
+  optionSections?: ProductOptionSection[]; // Custom multi-section modifier builder (e.g. Size, Crust, Add-ons)
   rentalPeriod?: 'per_hour' | 'per_day' | 'per_week' | 'per_month';
   wholesaleMinQty?: number;
   images: string[];
@@ -66,7 +109,12 @@ export interface Listing {
   stockQty?: number;
 }
 
-export type PostType = 'product' | 'update' | 'reel';
+export type PostType = 'product' | 'update' | 'deal' | 'reel' | 'announcement' | 'wholesale';
+
+export interface PostMediaItem {
+  url: string;
+  type: 'image' | 'video';
+}
 
 export interface Comment {
   id: string;
@@ -86,10 +134,13 @@ export interface Post {
   isVerifiedSeller: boolean;
   content: string;
   mediaUrls: string[];
+  mediaItems?: PostMediaItem[];
   postType: PostType;
   listingId?: string;
   listingTitle?: string;
   listingPrice?: number;
+  promoBadge?: string;
+  callToAction?: string;
   likesCount: number;
   isLiked?: boolean;
   commentsCount: number;

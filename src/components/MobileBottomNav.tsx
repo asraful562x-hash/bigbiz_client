@@ -9,7 +9,8 @@ import {
   Package, 
   User as UserIcon, 
   LayoutDashboard, 
-  ShieldAlert 
+  ShieldAlert,
+  MessageSquare 
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
@@ -17,6 +18,7 @@ interface MobileBottomNavProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   escrowOrdersCount: number;
+  unreadMessagesCount?: number;
   onOpenProfile?: () => void;
 }
 
@@ -25,13 +27,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   activeTab,
   setActiveTab,
   escrowOrdersCount,
+  unreadMessagesCount = 0,
   onOpenProfile,
 }) => {
-  // Determine 4th item based on role:
-  // Normal user ('buyer') gets 'Profile'
+  // Determine 5th item based on role:
+  // Normal user ('buyer') gets 'Messages' tab with unread badge
   // Other roles get their respective Hub/Dashboard
   const getRoleNavItem = () => {
-    if (currentUser.role === 'buyer') {
+    if (currentUser.role === 'buyer' || currentUser.role === 'buyer_free' || currentUser.role === 'buyer_premium') {
       return {
         id: 'profile',
         label: 'Profile',

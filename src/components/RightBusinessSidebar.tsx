@@ -15,13 +15,20 @@ import {
   Tag,
   ChevronRight,
   UserPlus,
-  UserCheck
+  UserCheck,
+  Star,
+  ShoppingBag,
+  Package,
+  DollarSign,
+  AlertCircle
 } from 'lucide-react';
 
 interface RightBusinessSidebarProps {
   users: User[];
   offers: DirectOffer[];
   listings: Listing[];
+  activeTab: string;
+  currentUser: User;
   onOpenSellerProfile: (userId: string) => void;
   onOpenListingDetail: (listing: Listing) => void;
   onOpenSellToUs: () => void;
@@ -33,6 +40,8 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
   users,
   offers,
   listings,
+  activeTab,
+  currentUser,
   onOpenSellerProfile,
   onOpenListingDetail,
   onOpenSellToUs,
@@ -46,6 +55,11 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
+
+  const role = currentUser.role;
+  const isBuyer = role === 'buyer_free' || role === 'buyer_premium' || role === 'buyer';
+  const isSeller = role === 'seller_free' || role === 'seller_premium';
+  const isVipBuyer = role === 'buyer_premium';
 
   const featuredMerchants = users.filter(u => u.isVerified || u.role.includes('seller')).slice(0, 3);
   const trendingListings = listings.slice(0, 3);
@@ -64,59 +78,120 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
   return (
     <aside className={`space-y-5 text-left font-sans ${isInDrawer ? 'px-0' : ''}`}>
 
-      {/* 1. LIVE B2B BUY DESK & RFQ REQUESTS */}
-      <div className={`bg-white ${card} p-4 border border-slate-200/90 shadow-sm space-y-3`}>
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-1.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
-            <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider truncate">
-              Live B2B Buy Desk RFQs
+      {/* 1. CONTEXT-DEPENDENT PRIMARY TOP WIDGET */}
+      {activeTab === 'marketplace' ? (
+        /* MARKETPLACE: Hot Deals & Best Value Listings */
+        <div className={`bg-white ${card} p-4 border border-slate-200/90 shadow-sm space-y-3`}>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-1.5">
+            <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5 min-w-0 truncate">
+              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span className="truncate">Top Rated Deals</span>
             </h4>
+            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full shrink-0">
+              Verified
+            </span>
           </div>
-          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
-            Active Buyers
-          </span>
+
+          <div className="space-y-2.5">
+            {listings.slice(0, 2).map((item) => (
+              <div 
+                key={item.id}
+                onClick={() => onOpenListingDetail(item)}
+                className={`p-2.5 bg-slate-50 hover:bg-indigo-50/50 ${inner} border border-slate-100 transition-all cursor-pointer flex gap-3`}
+              >
+                <img 
+                  src={item.images[0] || 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&q=80&w=400'} 
+                  alt={item.title}
+                  className={`w-12 h-12 ${innerSm} object-cover shrink-0`}
+                />
+                <div className="min-w-0 flex-1">
+                  <h5 className="font-bold text-xs text-slate-900 truncate">{item.title}</h5>
+                  <p className="text-[10px] text-slate-500 truncate">By {item.sellerName}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="font-extrabold text-xs text-indigo-700">${item.price.toLocaleString()}</span>
+                    <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">Escrow Active</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      ) : activeTab === 'orders' ? (
+        /* ORDERS: Escrow Protection Summary */
+        <div className={`bg-white ${card} p-4 border border-slate-200/90 shadow-sm space-y-3`}>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" /> Buyer Protection Vault
+            </h4>
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+              Zero Risk
+            </span>
+          </div>
 
-        <div className="space-y-2.5">
-          {offers.slice(0, 2).map((off) => (
-            <div 
-              key={off.id}
-              className={`p-3 bg-slate-50 hover:bg-slate-100/80 ${inner} border border-slate-100 transition-colors space-y-2`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
-                  {off.category.replace('_', ' ')}
-                </span>
-                <span className="font-extrabold text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
-                  Target: ${off.expectedPrice.toLocaleString()}
-                </span>
-              </div>
-
-              <h5 className="font-bold text-xs text-slate-900 leading-snug line-clamp-2">
-                {off.title}
-              </h5>
-
-              <div className="flex items-center justify-between text-[11px] pt-1">
-                <span className="text-slate-400 font-medium truncate">{off.sellerName}</span>
-                <button
-                  onClick={onOpenSellToUs}
-                  className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 hover:underline shrink-0"
-                >
-                  Submit Quote <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
+          <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100 text-xs space-y-1.5">
+            <p className="font-bold text-emerald-900">How Escrow Secures Every Transaction:</p>
+            <ul className="text-[11px] text-emerald-800 space-y-1 list-disc list-inside">
+              <li>Funds held in neutral bank vault</li>
+              <li>Released only after buyer confirmation</li>
+              <li>Instant dispute resolution team</li>
+            </ul>
+          </div>
+        </div>
+      ) : (
+        /* FEED / GENERAL: Live B2B Buy Desk RFQs */
+        <div className={`bg-white ${card} p-4 border border-slate-200/90 shadow-sm space-y-3`}>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider truncate">
+                Live B2B Buy Desk RFQs
+              </h4>
             </div>
-          ))}
-        </div>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
+              Active Buyers
+            </span>
+          </div>
 
-        <button
-          onClick={onOpenSellToUs}
-          className={`w-full text-center text-xs font-extrabold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 py-2 ${innerSm} border border-indigo-100 transition-colors block truncate`}
-        >
-          View All RFQs & Direct Buyouts →
-        </button>
-      </div>
+          <div className="space-y-2.5">
+            {offers.slice(0, 2).map((off) => (
+              <div 
+                key={off.id}
+                className={`p-3 bg-slate-50 hover:bg-slate-100/80 ${inner} border border-slate-100 transition-colors space-y-2`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
+                    {off.category.replace('_', ' ')}
+                  </span>
+                  <span className="font-extrabold text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                    Target: ${off.expectedPrice.toLocaleString()}
+                  </span>
+                </div>
+
+                <h5 className="font-bold text-xs text-slate-900 leading-snug line-clamp-2">
+                  {off.title}
+                </h5>
+
+                <div className="flex items-center justify-between text-[11px] pt-1">
+                  <span className="text-slate-400 font-medium truncate">{off.sellerName}</span>
+                  <button
+                    onClick={onOpenSellToUs}
+                    className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 hover:underline shrink-0"
+                  >
+                    Submit Quote <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={onOpenSellToUs}
+            className={`w-full text-center text-xs font-extrabold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 py-2 ${innerSm} border border-indigo-100 transition-colors block truncate`}
+          >
+            View All RFQs & Direct Buyouts →
+          </button>
+        </div>
+      )}
 
       {/* 2. TRENDING B2B SOFTWARE & PRODUCT DEALS */}
       <div className={`bg-white ${card} p-4 border border-slate-200/90 shadow-sm space-y-3`}>

@@ -32,6 +32,7 @@ interface MarketplaceViewProps {
   setSearchQuery: (q: string) => void;
   onSelectListing: (listing: Listing) => void;
   onOpenSellToUs: () => void;
+  onOpenSellerProfile?: (sellerId: string) => void;
 }
 
 export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
@@ -42,7 +43,8 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   searchQuery,
   setSearchQuery,
   onSelectListing,
-  onOpenSellToUs
+  onOpenSellToUs,
+  onOpenSellerProfile
 }) => {
   const [selectedCondition, setSelectedCondition] = useState<ProductCondition | 'all'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -343,18 +345,33 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                 <div className="space-y-1.5">
                   
-                  {/* Seller info line */}
-                  <div className="flex items-center gap-1.5">
-                    <img
-                      src={listing.sellerAvatar}
-                      alt={listing.sellerName}
-                      className="w-4 h-4 rounded-full object-cover border border-slate-200"
-                    />
-                    <span className="text-[11px] font-medium text-slate-500 truncate">
-                      {listing.sellerName}
-                    </span>
-                    {listing.isVerifiedSeller && (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                  {/* Seller info line & store category */}
+                  <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenSellerProfile?.(listing.sellerId);
+                      }}
+                      className="flex items-center gap-1.5 hover:text-indigo-600 transition-colors group/seller cursor-pointer"
+                      title="View all categories & products by this seller"
+                    >
+                      <img
+                        src={listing.sellerAvatar}
+                        alt={listing.sellerName}
+                        className="w-4 h-4 rounded-full object-cover border border-slate-200 group-hover/seller:ring-1 group-hover/seller:ring-indigo-500"
+                      />
+                      <span className="text-[11px] font-bold text-slate-600 group-hover/seller:text-indigo-600 truncate underline-offset-2 hover:underline">
+                        {listing.sellerName}
+                      </span>
+                      {listing.isVerifiedSeller && (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                      )}
+                    </div>
+
+                    {listing.storeCategory && (
+                      <span className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md border border-slate-200/80">
+                        {listing.storeCategory}
+                      </span>
                     )}
                   </div>
 

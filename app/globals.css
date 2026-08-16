@@ -20,12 +20,28 @@
   }
 }
 
+@keyframes tabFadeSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .animate-slide-up-bottom {
   animation: slideUpFromBottom 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-fade-in-backdrop {
   animation: fadeInBackdrop 0.25s ease-out forwards;
+}
+
+.animate-tab-switch {
+  animation: tabFadeSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }
 
 @layer utilities {

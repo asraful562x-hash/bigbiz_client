@@ -1,0 +1,237 @@
+/* ── Login Page ─────────────────────────────────────────── */
+
+.login-root {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: hsl(222, 47%, 7%);
+  overflow: hidden;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Ambient Blobs ─────────────────────────────────────── */
+
+.login-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.18;
+  pointer-events: none;
+  animation: blobDrift 12s ease-in-out infinite alternate;
+}
+
+.login-blob--blue {
+  width: 520px;
+  height: 520px;
+  background: hsl(214, 89%, 52%);
+  top: -140px;
+  left: -140px;
+  animation-delay: 0s;
+}
+
+.login-blob--indigo {
+  width: 420px;
+  height: 420px;
+  background: hsl(240, 70%, 60%);
+  bottom: -100px;
+  right: -80px;
+  animation-delay: -6s;
+}
+
+@keyframes blobDrift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(30px, 20px) scale(1.06); }
+}
+
+/* ── Card ──────────────────────────────────────────────── */
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: hsl(222, 35%, 11%);
+  border: 1px solid hsl(222, 30%, 20%);
+  border-radius: 24px;
+  padding: 2.75rem 2.5rem 2.25rem;
+  box-shadow:
+    0 0 0 1px hsl(222, 30%, 18%),
+    0 24px 80px hsl(222, 60%, 4% / 0.7),
+    inset 0 1px 0 hsl(222, 30%, 25% / 0.5);
+  backdrop-filter: blur(12px);
+}
+
+/* ── Logo ──────────────────────────────────────────────── */
+
+.login-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  justify-content: center;
+  margin-bottom: 0.625rem;
+}
+
+.login-logo__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(214, 89%, 62%);
+}
+
+.login-logo__name {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: hsl(210, 100%, 97%);
+  margin: 0;
+  line-height: 1;
+}
+
+/* ── Tagline ───────────────────────────────────────────── */
+
+.login-tagline {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: hsl(215, 20%, 52%);
+  margin: 0 0 1.75rem;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
+
+/* ── Divider ───────────────────────────────────────────── */
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.375rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: hsl(222, 25%, 22%);
+}
+
+.login-divider span {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(215, 20%, 42%);
+  white-space: nowrap;
+}
+
+/* ── Buttons ───────────────────────────────────────────── */
+
+.login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-bottom: 1.75rem;
+}
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.8125rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+  cursor: pointer;
+  border: none;
+  user-select: none;
+}
+
+.login-btn:active {
+  transform: scale(0.97);
+}
+
+.login-btn__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+}
+
+/* Google button */
+.login-btn--google {
+  background: hsl(0, 0%, 100%);
+  color: hsl(0, 0%, 18%);
+  box-shadow: 0 2px 12px hsl(0, 0%, 0% / 0.25);
+}
+
+.login-btn--google:hover {
+  filter: brightness(0.96);
+  box-shadow: 0 6px 20px hsl(0, 0%, 0% / 0.32);
+  transform: translateY(-1px);
+}
+
+/* Facebook button */
+.login-btn--facebook {
+  background: hsl(214, 89%, 42%);
+  color: hsl(0, 0%, 100%);
+  box-shadow: 0 2px 12px hsl(214, 89%, 30% / 0.45);
+}
+
+.login-btn--facebook:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 22px hsl(214, 89%, 30% / 0.55);
+  transform: translateY(-1px);
+}
+
+/* ── Footer ────────────────────────────────────────────── */
+
+.login-footer {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: hsl(215, 20%, 50%);
+  margin: 0 0 0.5rem;
+}
+
+.login-footer__link {
+  color: hsl(214, 80%, 64%);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.12s ease;
+}
+
+.login-footer__link:hover {
+  color: hsl(214, 89%, 72%);
+}
+
+.login-terms {
+  text-align: center;
+  font-size: 0.6875rem;
+  color: hsl(215, 15%, 38%);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 2rem 1.5rem 1.75rem;
+    border-radius: 20px;
+  }
+
+  .login-logo__name {
+    font-size: 1.625rem;
+  }
+}

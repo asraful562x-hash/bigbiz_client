@@ -28,14 +28,16 @@ import {
   Dispute 
 } from "./src/types";
 
+import { seedDatabaseUsers } from "./server/dbSeeder";
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: "10mb" }));
 
-  // In-Memory Database State
-  let users: User[] = [...INITIAL_USERS];
+  // Backend Database Seeding (Runs on startup & migration)
+  let users: User[] = seedDatabaseUsers();
   let listings: Listing[] = [...INITIAL_LISTINGS];
   let posts: Post[] = [...INITIAL_POSTS];
   let stories: Story[] = [...INITIAL_STORIES];

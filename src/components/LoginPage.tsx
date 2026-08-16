@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { INITIAL_USERS } from '../data/mockData';
 import { 
   Building2, 
@@ -10,20 +10,34 @@ import {
   Wrench, 
   Handshake, 
   ArrowRight, 
-  CheckCircle2, 
   Lock, 
   Mail, 
   User as UserIcon, 
   ShieldCheck, 
   Sparkles, 
   Globe, 
-  TrendingUp, 
-  Zap
+  Zap,
+  Loader2,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: User, token?: string) => void;
 }
+
+const mapRoleNameToUserRole = (roleName: string): UserRole => {
+  if (roleName === 'buyer_premium') return 'buyer_premium';
+  if (roleName === 'buyer_free' || roleName === 'buyer') return 'buyer_free';
+  if (roleName === 'seller_free') return 'seller_free';
+  if (roleName === 'seller_premium' || roleName === 'seller') return 'seller_premium';
+  if (roleName === 'admin') return 'admin';
+  if (roleName === 'moderator') return 'moderator';
+  if (roleName === 'procurement') return 'procurement';
+  return 'buyer_free';
+};
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -32,37 +46,172 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [businessCategory, setBusinessCategory] = useState<'products' | 'software' | 'services' | 'b2b'>('products');
+  const [roleType, setRoleType] = useState<UserRole>('buyer_free');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleCustomLogin = (e: React.FormEvent) => {
+  const handleOAuthLogin = (provider: 'google' | 'facebook') => {
+    window.location.href = `${API_BASE}/api/auth/${provider}`;
+  };
+
+  const handleCustomLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    // Map custom email or pick matching user or first user
-    const existing = INITIAL_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
-      onLogin(existing);
-    } else {
-      // Create lightweight session user object
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        name: fullName || businessName || email.split('@')[0],
-        username: `@${(fullName || email.split('@')[0]).toLowerCase().replace(/\s+/g, '')}`,
-        email: email,
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
-        role: businessCategory === 'b2b' ? 'procurement' : 'seller_premium',
-        bio: `${businessCategory.toUpperCase()} vendor platform account`,
-        isVerified: true,
-        verificationBadgeType: 'b2b_verified',
-        companyName: businessName || `${fullName || 'My'} Enterprise`,
-        rating: 5.0,
-        reviewsCount: 1,
-        totalSales: 1,
-        followersCount: 120,
-        followingCount: 45,
-        subscriptionStatus: 'premium',
-        location: 'New York, USA',
-        createdAt: 'Just now'
-      };
-      onLogin(newUser);
+    if (!email || !password) return;
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsLoading(true);
+
+    try {
+      if (mode === 'login') {
+        // Backend login
+        const response = await fetch(`${API_BASE}/api/users/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const userPayload = data.data;
+
+          const roleName = userPayload.role_name || 'buyer_free';
+          const resolvedRole = mapRoleNameToUserRole(roleName);
+          const loggedInUser: User = {
+            id: `user-${userPayload.id || Date.now()}`,
+            name: userPayload.full_name || email.split('@')[0],
+            username: `@${(userPayload.full_name || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+            email: userPayload.email,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+            role: resolvedRole,
+            bio: `${(userPayload.business_focus || roleName).toUpperCase()} platform account`,
+            isVerified: resolvedRole.includes('premium') || resolvedRole === 'admin' || resolvedRole === 'procurement',
+            verificationBadgeType: 'b2b_verified',
+            companyName: userPayload.company_name || 'Enterprise Account',
+            rating: 5.0,
+            reviewsCount: 1,
+            totalSales: 1,
+            followersCount: 120,
+            followingCount: 45,
+            subscriptionStatus: resolvedRole.includes('premium') || resolvedRole === 'admin' || resolvedRole === 'procurement' ? 'premium' : 'free',
+            location: 'Global',
+            createdAt: 'Just now'
+          };
+
+          // Dual-storage token
+          if (userPayload.token) {
+            localStorage.setItem('auth_token', userPayload.token);
+            document.cookie = `auth_token=${userPayload.token}; path=/; max-age=86400; SameSite=Lax`;
+          }
+          localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
+
+          setSuccessMessage('Login successful! Redirecting...');
+          setTimeout(() => onLogin(loggedInUser, userPayload.token), 600);
+          return;
+        }
+
+        if (response.status === 401 || response.status === 400 || response.status === 403) {
+          const errData = await response.json().catch(() => ({ message: 'Invalid credentials' }));
+          setErrorMessage(errData.message || 'Invalid email or password.');
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // Register Mode: create user in backend
+        const response = await fetch(`${API_BASE}/api/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: fullName || businessName || email.split('@')[0],
+            company_name: businessName,
+            email: email,
+            role_name: roleType,
+            business_focus: businessCategory,
+            password: password,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const userPayload = data.data;
+          const roleName = userPayload.role_name || roleType;
+          const resolvedRole = mapRoleNameToUserRole(roleName);
+
+          const newUser: User = {
+            id: `user-${userPayload.id || Date.now()}`,
+            name: userPayload.full_name,
+            username: `@${userPayload.full_name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+            email: userPayload.email,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+            role: resolvedRole,
+            bio: `${businessCategory.toUpperCase()} account`,
+            isVerified: resolvedRole.includes('premium') || resolvedRole === 'admin' || resolvedRole === 'procurement',
+            verificationBadgeType: 'b2b_verified',
+            companyName: userPayload.company_name || `${fullName}'s Business`,
+            rating: 5.0,
+            reviewsCount: 0,
+            totalSales: 0,
+            followersCount: 10,
+            followingCount: 5,
+            subscriptionStatus: resolvedRole.includes('premium') || resolvedRole === 'admin' || resolvedRole === 'procurement' ? 'premium' : 'free',
+            location: 'Global',
+            createdAt: 'Just now'
+          };
+
+          const token = `token_${Date.now()}`;
+          localStorage.setItem('auth_token', token);
+          document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+          localStorage.setItem('auth_user', JSON.stringify(newUser));
+
+          setSuccessMessage('Account registered successfully! Accessing workspace...');
+          setTimeout(() => onLogin(newUser, token), 600);
+          return;
+        }
+
+        const errData = await response.json().catch(() => ({ message: 'Registration failed' }));
+        setErrorMessage(errData.message || 'Registration failed. Email may already be registered.');
+        setIsLoading(false);
+        return;
+      }
+    } catch {
+      // Fallback for offline demonstration
+      const existing = INITIAL_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (existing) {
+        localStorage.setItem('auth_token', `demo_token_${existing.id}`);
+        document.cookie = `auth_token=demo_token_${existing.id}; path=/; max-age=86400; SameSite=Lax`;
+        localStorage.setItem('auth_user', JSON.stringify(existing));
+        onLogin(existing);
+      } else {
+        const resolvedRole = mapRoleNameToUserRole(roleType);
+        const fallbackUser: User = {
+          id: `user-${Date.now()}`,
+          name: fullName || businessName || email.split('@')[0],
+          username: `@${(fullName || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          email: email,
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+          role: resolvedRole,
+          bio: `${businessCategory.toUpperCase()} account`,
+          isVerified: resolvedRole.includes('premium') || resolvedRole === 'admin' || resolvedRole === 'procurement',
+          verificationBadgeType: 'b2b_verified',
+          companyName: businessName || `${fullName || 'My'} Enterprise`,
+          rating: 5.0,
+          reviewsCount: 1,
+          totalSales: 1,
+          followersCount: 120,
+          followingCount: 45,
+          subscriptionStatus: resolvedRole.includes('premium') || resolvedRole === 'admin' || resolvedRole === 'procurement' ? 'premium' : 'free',
+          location: 'Global',
+          createdAt: 'Just now'
+        };
+        const token = `demo_token_${fallbackUser.id}`;
+        localStorage.setItem('auth_token', token);
+        document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+        localStorage.setItem('auth_user', JSON.stringify(fallbackUser));
+        onLogin(fallbackUser, token);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -90,24 +239,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-3">
-          <span className="text-xs text-slate-400">Need immediate demo access?</span>
-          <button 
-            onClick={() => onLogin(INITIAL_USERS[2])}
-            className="text-xs font-bold bg-indigo-600/80 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-500/20 active:scale-95 border border-indigo-400/30"
-          >
-            Instant Demo Access
-          </button>
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <span>Enterprise Secure Authentication</span>
         </div>
       </header>
 
       {/* Main Content Body */}
       <main className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:gap-8 lg:items-center">
 
-        {/* ── MOBILE LAYOUT: Hero text (top) → Login card (middle) → Feature grid (bottom) ── */}
-        {/* ── DESKTOP LAYOUT: Left col = hero text + feature grid | Right col = login card ── */}
-
-        {/* Hero Text — always on top (mobile) / left top (desktop) */}
+        {/* Hero Text */}
         <div className="lg:col-span-6 lg:row-start-1 space-y-4 text-left mb-6 lg:mb-0">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold backdrop-blur-md">
             <Sparkles className="w-4 h-4 text-amber-400" />
@@ -122,7 +263,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             From physical product selling, digital software licensing, and professional services to multi-million B2B procurement — direct trade, escrow security, and social networking under one roof.
           </p>
 
-          {/* Feature Matrix Cards — hidden on mobile (shown below login), visible on desktop */}
+          {/* Feature Matrix Cards */}
           <div className="hidden lg:grid grid-cols-2 gap-3 pt-2">
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 transition-all group">
               <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
@@ -157,7 +298,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </div>
           </div>
 
-          {/* Platform Trust Stats — desktop only */}
+          {/* Platform Trust Stats */}
           <div className="hidden lg:flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-400 pt-4 border-t border-slate-800">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -174,16 +315,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        {/* Right Form Column: Login — shown FIRST on mobile (top, centered), right on desktop */}
-        <div className="lg:col-span-6 w-full max-w-lg lg:max-w-none mx-auto">
-          <div className="bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-indigo-950/50">
+        {/* Right Form Column: OAuth + Email Sign-In / Register */}
+        <div className="lg:col-span-6 w-full flex justify-center lg:justify-end">
+          <div className={`w-full ${mode === 'login' ? 'max-w-md' : 'max-w-lg'} bg-slate-900/85 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-indigo-950/50 transition-all duration-200`}>
             
             {/* Mode Switcher Tabs */}
-            <div className="flex bg-slate-950/60 rounded-2xl p-1 border border-white/5 mb-6">
+            <div className="flex bg-slate-950/70 rounded-2xl p-1 border border-white/5 mb-5">
               <button
                 type="button"
-                onClick={() => setMode('login')}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                onClick={() => { setMode('login'); setErrorMessage(null); setSuccessMessage(null); }}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   mode === 'login' 
                     ? 'bg-indigo-600 text-white shadow-md' 
                     : 'text-slate-400 hover:text-white'
@@ -193,8 +334,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </button>
               <button
                 type="button"
-                onClick={() => setMode('register')}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                onClick={() => { setMode('register'); setErrorMessage(null); setSuccessMessage(null); }}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   mode === 'register' 
                     ? 'bg-indigo-600 text-white shadow-md' 
                     : 'text-slate-400 hover:text-white'
@@ -204,8 +345,63 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </button>
             </div>
 
+            {/* Prominent OAuth Options Section */}
+            <div className="space-y-2.5 mb-5">
+              {/* Google OAuth Button */}
+              <button
+                type="button"
+                id="btn-oauth-google"
+                onClick={() => handleOAuthLogin('google')}
+                className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 active:scale-[0.99] border border-slate-200 cursor-pointer"
+              >
+                <svg width="18" height="18" viewBox="0 0 48 48" className="shrink-0">
+                  <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                  <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                  <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                  <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                </svg>
+                <span>{mode === 'login' ? 'Continue with Google' : 'Sign Up with Google'}</span>
+              </button>
+
+              {/* Facebook OAuth Button */}
+              <button
+                type="button"
+                id="btn-oauth-facebook"
+                onClick={() => handleOAuthLogin('facebook')}
+                className="w-full py-2.5 px-4 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-3 active:scale-[0.99] cursor-pointer"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                  <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047v-2.66c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.265h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+                </svg>
+                <span>{mode === 'login' ? 'Continue with Facebook' : 'Sign Up with Facebook'}</span>
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="relative flex items-center justify-center mb-5">
+              <div className="border-t border-slate-800 w-full" />
+              <span className="bg-slate-900 px-3 text-[10px] uppercase font-bold tracking-wider text-slate-500 absolute">
+                or with business email
+              </span>
+            </div>
+
+            {/* Error & Success Feedback Alerts */}
+            {errorMessage && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{successMessage}</span>
+              </div>
+            )}
+
             {/* Custom Login / Signup Form */}
-            <form onSubmit={handleCustomLogin} className="space-y-4 text-left">
+            <form onSubmit={handleCustomLogin} className="space-y-3.5 text-left">
               {mode === 'register' && (
                 <>
                   <div>
@@ -218,7 +414,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="e.g. Alex Morgan"
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-800 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        className="w-full pl-10 pr-4 py-2 bg-slate-950/80 border border-slate-800 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
@@ -229,24 +425,81 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       <Building2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
                       <input
                         type="text"
-                        required
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
-                        placeholder="e.g. Apex Software Solutions"
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-800 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        placeholder="e.g. Apex Enterprise Solutions"
+                        className="w-full pl-10 pr-4 py-2 bg-slate-950/80 border border-slate-800 focus:border-indigo-500 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
+                    </div>
+                  </div>
+
+                  {/* Account Role Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Account Role & Tier</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRoleType('buyer_free')}
+                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
+                          roleType === 'buyer_free'
+                            ? 'bg-indigo-600/30 border-indigo-500 text-white shadow-xs font-bold'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <span>Free Buyer</span>
+                        <span className="text-[10px] opacity-70 font-normal">Standard customer tier</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setRoleType('buyer_premium')}
+                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
+                          roleType === 'buyer_premium'
+                            ? 'bg-emerald-600/30 border-emerald-500 text-emerald-200 shadow-xs font-bold'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1">VIP Buyer ⭐</span>
+                        <span className="text-[10px] opacity-70 font-normal">Priority escrow & bulk RFQs</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setRoleType('seller_free')}
+                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
+                          roleType === 'seller_free'
+                            ? 'bg-teal-600/30 border-teal-500 text-teal-200 shadow-xs font-bold'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <span>Free Seller</span>
+                        <span className="text-[10px] opacity-70 font-normal">Basic marketplace vendor</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setRoleType('seller_premium')}
+                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
+                          roleType === 'seller_premium'
+                            ? 'bg-amber-600/30 border-amber-500 text-amber-200 shadow-xs font-bold'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1">PRO Seller ⚡</span>
+                        <span className="text-[10px] opacity-70 font-normal">SaaS licenses & custom store</span>
+                      </button>
                     </div>
                   </div>
 
                   {/* Business Type Selector */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Business Focus</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Business Focus</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { id: 'products', label: 'Product Selling', icon: ShoppingBag },
-                        { id: 'software', label: 'Software / SaaS', icon: Code2 },
-                        { id: 'services', label: 'Services & Consultancy', icon: Wrench },
-                        { id: 'b2b', label: 'B2B Procurement', icon: Handshake },
+                        { id: 'products', label: 'Products', icon: ShoppingBag },
+                        { id: 'software', label: 'Software/SaaS', icon: Code2 },
+                        { id: 'services', label: 'Services', icon: Wrench },
+                        { id: 'b2b', label: 'B2B Trade', icon: Handshake },
                       ].map((cat) => {
                         const IconComponent = cat.icon;
                         return (
@@ -254,13 +507,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                             key={cat.id}
                             type="button"
                             onClick={() => setBusinessCategory(cat.id as any)}
-                            className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all ${
+                            className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
                               businessCategory === cat.id
                                 ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300 font-bold'
                                 : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700'
                             }`}
                           >
-                            <IconComponent className="w-4 h-4 shrink-0" />
+                            <IconComponent className="w-3.5 h-3.5 shrink-0" />
                             <span className="text-[11px] truncate">{cat.label}</span>
                           </button>
                         );
@@ -289,7 +542,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-slate-300">Password</label>
                   {mode === 'login' && (
-                    <button type="button" className="text-[11px] text-indigo-400 hover:underline">
+                    <button type="button" className="text-[11px] text-indigo-400 hover:underline cursor-pointer">
                       Forgot password?
                     </button>
                   )}
@@ -309,52 +562,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 active:scale-[0.99] mt-2"
+                disabled={isLoading}
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 active:scale-[0.99] mt-2 disabled:opacity-60 cursor-pointer"
               >
-                <span>{mode === 'login' ? 'Sign In to Business Hub' : 'Create Business Account'}</span>
-                <ArrowRight className="w-4 h-4" />
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <span>{mode === 'login' ? 'Sign In to Business Hub' : 'Create Business Account'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </form>
-
-            {/* Quick Demo Switch Persona Box */}
-            <div className="mt-6 pt-5 border-t border-slate-800/80">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  ⚡ Quick Demo Business Accounts
-                </span>
-                <span className="text-[10px] text-slate-500">Select any role to test</span>
-              </div>
-
-              <div className="space-y-2">
-                {INITIAL_USERS.slice(0, 4).map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => onLogin(u)}
-                    className="w-full p-2 rounded-xl bg-slate-950/50 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/40 flex items-center justify-between text-left group transition-all"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-200 group-hover:text-indigo-300 truncate">
-                          {u.name}
-                        </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                          {u.companyName || u.role.replace('_', ' ')}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
-                      Login as →
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
 
           </div>
         </div>
 
-        {/* Feature Grid + Trust Stats — mobile only, shown below login card */}
+        {/* Feature Grid + Trust Stats — mobile only */}
         <div className="lg:hidden space-y-4 mt-6 text-left">
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 transition-all group">

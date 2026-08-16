@@ -30,7 +30,9 @@ import {
   Clock,
   ArrowRight,
   Menu,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Bot,
+  RefreshCw
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -53,6 +55,7 @@ interface HeaderProps {
   onUpgradeTier: () => void;
   onLogout?: () => void;
   onOpenSwitchAccount?: () => void;
+  onOpenProfile?: (userId: string) => void;
   onOpenLeftDrawer?: () => void;
   onOpenRightDrawer?: () => void;
   notifications?: AppNotification[];
@@ -60,6 +63,8 @@ interface HeaderProps {
   conversations?: Conversation[];
   messages?: Message[];
   onSendMessage?: (conversationId: string, text: string) => void;
+  /** When true (e.g. Settings / Help), hides nav tabs and sidebars — full screen mode */
+  isFullScreen?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -82,13 +87,15 @@ export const Header: React.FC<HeaderProps> = ({
   onUpgradeTier,
   onLogout,
   onOpenSwitchAccount,
+  onOpenProfile,
   onOpenLeftDrawer,
   onOpenRightDrawer,
   notifications = [],
   onMarkAllNotificationsRead,
   conversations = [],
   messages = [],
-  onSendMessage
+  onSendMessage,
+  isFullScreen = false,
 }) => {
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -98,6 +105,70 @@ export const Header: React.FC<HeaderProps> = ({
   // Quick Chat Inside Overlay
   const [selectedConvId, setSelectedConvId] = useState<string | null>(conversations[0]?.id || null);
   const [quickMsgText, setQuickMsgText] = useState('');
+  
+  // Overlay Mode: 'users' vs 'bot'
+  const [overlayChatTab, setOverlayChatTab] = useState<'users' | 'bot'>('users');
+  const [overlayBotMessages, setOverlayBotMessages] = useState<Array<{ id: string; role: 'user' | 'bot'; text: string; time: string; followUps?: string[] }>>([
+    {
+      id: 'welcome',
+      role: 'bot',
+      text: "👋 **Hi there! I'm BizBot AI**, your 24/7 business assistant.\n\nI can help you with account issues, creating listings, orders, escrow, payments, and platform rules. How can I help you today?",
+      time: 'Just now',
+      followUps: ['Login & Account', 'Orders & Escrow', 'Create a Listing', 'Payments & Billing']
+    }
+  ]);
+  const [overlayBotInput, setOverlayBotInput] = useState('');
+  const [isOverlayBotTyping, setIsOverlayBotTyping] = useState(false);
+
+  const handleSendOverlayBot = (textToSend?: string) => {
+    const text = textToSend || overlayBotInput;
+    if (!text.trim()) return;
+
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      role: 'user' as const,
+      text: text.trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setOverlayBotMessages(prev => [...prev, userMsg]);
+    setOverlayBotInput('');
+    setIsOverlayBotTyping(true);
+
+    const lower = text.toLowerCase();
+    setTimeout(() => {
+      let reply = "I'm not sure about that, but our human support desk is always here to help! Reach us at support@bizsocial.com.";
+      let followUps = ['Login & Account', 'Orders & Escrow', 'Payments & Billing'];
+
+      if (lower.includes('login') || lower.includes('password') || lower.includes('access')) {
+        reply = "**Login Assistance:**\n• Verify your registered email.\n• Use 'Forgot Password' on the login card to reset credentials.\n• OAuth logins bypass passwords securely.\n• Contact support@bizsocial.com if locked.";
+        followUps = ['How do I change email?', 'I need MFA help'];
+      } else if (lower.includes('order') || lower.includes('escrow') || lower.includes('buy')) {
+        reply = "**Escrow Protection:**\n• Funds are held in neutral escrow until delivery confirmation.\n• Track live milestones under Orders & Escrow.\n• 100% money-back guarantee for disputed orders.";
+        followUps = ['How do I confirm delivery?', 'Raise an order dispute'];
+      } else if (lower.includes('listing') || lower.includes('sell') || lower.includes('product')) {
+        reply = "**Creating a Listing:**\n• Click the **＋ button** at the top right.\n• Choose category (B2B, Goods, Services, Rentals).\n• Set price, stock, and upload images to publish instantly.";
+        followUps = ['How to get verified?', 'Listing pricing tips'];
+      } else if (lower.includes('payment') || lower.includes('billing') || lower.includes('fee') || lower.includes('refund')) {
+        reply = "**Payments & Billing:**\n• 3% seller fee on successful sales.\n• Payouts processed in 24–48 hours via Bank Transfer or Card.\n• Refunds processed in 5–7 days.";
+        followUps = ['View my invoices', 'Upgrade subscription'];
+      } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('help')) {
+        reply = "👋 **Hello!** I am BizBot AI. Pick a topic or type any question below to get instant answers!";
+      }
+
+      setOverlayBotMessages(prev => [
+        ...prev,
+        {
+          id: `bot-${Date.now()}`,
+          role: 'bot',
+          text: reply,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          followUps
+        }
+      ]);
+      setIsOverlayBotTyping(false);
+    }, 800);
+  };
 
   const mainNavScrollRef = useRef<HTMLDivElement>(null);
   const { canScrollLeft: canNavScrollLeft, canScrollRight: canNavScrollRight } = useScrollOverflow(mainNavScrollRef);
@@ -156,14 +227,24 @@ export const Header: React.FC<HeaderProps> = ({
           
           {/* Left Brand Container (Menu + Logo + Subtitle) — stays strictly on left */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Hamburger — visible only on < 1300px */}
-            <button
-              onClick={onOpenLeftDrawer}
-              className="max-[1299px]:flex hidden items-center justify-center p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors shrink-0"
-              aria-label="Open sidebar"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+            {/* In full-screen mode show a back arrow; otherwise hamburger */}
+            {isFullScreen ? (
+              <button
+                onClick={() => setActiveTab('feed')}
+                className="flex items-center justify-center p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors shrink-0 group"
+                aria-label="Back to Feed"
+              >
+                <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+              </button>
+            ) : (
+              <button
+                onClick={onOpenLeftDrawer}
+                className="max-[1299px]:flex hidden items-center justify-center p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors shrink-0"
+                aria-label="Open sidebar"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
 
             {/* Logo & Brand */}
             <div className="flex items-center gap-2 sm:gap-3 cursor-pointer" onClick={() => setActiveTab('feed')}>
@@ -173,11 +254,23 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="min-w-0 text-left">
                 <div className="flex items-center gap-1 sm:gap-1.5">
                   <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight">BizSocial</span>
-                  <span className="text-[9px] sm:text-[10px] bg-indigo-50 text-indigo-700 px-1.5 sm:px-2 py-0.5 rounded-full font-bold border border-indigo-200 hidden xs:inline-block">
-                    MARKETPLACE
-                  </span>
+                  {isFullScreen ? (
+                    <span className="text-[9px] sm:text-[10px] bg-slate-100 text-slate-500 px-1.5 sm:px-2 py-0.5 rounded-full font-bold border border-slate-200 hidden xs:inline-block">
+                      {activeTab === 'settings' ? 'PROFILE' : 'HELP'}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] sm:text-[10px] bg-indigo-50 text-indigo-700 px-1.5 sm:px-2 py-0.5 rounded-full font-bold border border-indigo-200 hidden xs:inline-block">
+                      MARKETPLACE
+                    </span>
+                  )}
                 </div>
-                <p className="text-[11px] text-slate-500 hidden min-[426px]:block truncate">Social E-Commerce & B2B Hub</p>
+                <p className="text-[11px] text-slate-500 hidden min-[426px]:block truncate">
+                  {isFullScreen
+                    ? activeTab === 'settings'
+                      ? 'Profile & Settings'
+                      : 'Help Center & Support'
+                    : 'Social E-Commerce & B2B Hub'}
+                </p>
               </div>
             </div>
           </div>
@@ -231,24 +324,39 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Action Tools & User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Direct Offer Action Button */}
-            <button
-              onClick={onOpenSellToUs}
-              className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold text-xs px-3 py-2 rounded-xl shadow-xs transition-all active:scale-95"
-            >
-              <Handshake className="w-4 h-4" />
-              <span>Sell to Us Direct</span>
-            </button>
+            {/* Direct Offer Action Button — hide for admin */}
+            {currentUser.role !== 'admin' && currentUser.role !== 'moderator' && (
+              <button
+                onClick={onOpenSellToUs}
+                className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold text-xs px-3 py-2 rounded-xl shadow-xs transition-all active:scale-95"
+              >
+                <Handshake className="w-4 h-4" />
+                <span>Sell to Us Direct</span>
+              </button>
+            )}
 
-            {/* Create Post / Listing (Square Icon Button) */}
-            <button
-              onClick={onOpenCreateModal}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center shadow-xs transition-all active:scale-95 shrink-0"
-              title="Create Post or Listing"
-              aria-label="Create Post or Listing"
-            >
-              <PlusCircle className="w-5 h-5" />
-            </button>
+            {/* Admin Private Badge — shown instead for admin roles */}
+            {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className="hidden lg:flex items-center gap-1.5 bg-purple-950 hover:bg-purple-900 border border-purple-700/50 text-purple-300 font-bold text-xs px-3 py-2 rounded-xl shadow-xs transition-all active:scale-95"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                <span>Mission Control</span>
+              </button>
+            )}
+
+            {/* Create Post / Listing — hide for admin */}
+            {currentUser.role !== 'admin' && currentUser.role !== 'moderator' && (
+              <button
+                onClick={onOpenCreateModal}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center shadow-xs transition-all active:scale-95 shrink-0"
+                title="Create Post or Listing"
+                aria-label="Create Post or Listing"
+              >
+                <PlusCircle className="w-5 h-5" />
+              </button>
+            )}
 
 
 
@@ -384,7 +492,10 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
                 title="Messages"
               >
-                <MessageSquare className={`w-5 h-5 ${isMessagesOpen ? 'text-white' : ''}`} />
+                <div className="relative flex items-center justify-center group">
+                  <MessageSquare className={`w-5 h-5 transition-transform duration-200 group-hover:scale-110 ${isMessagesOpen ? 'text-white' : ''}`} />
+                  <Sparkles className="w-3 h-3 text-amber-300 absolute -top-1.5 -right-1.5 animate-pulse filter drop-shadow-xs" />
+                </div>
                 {unreadMessagesCount > 0 && (
                   <span className={`absolute text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center leading-none transition-all ${
                     isMessagesOpen
@@ -396,149 +507,253 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </button>
 
-              {/* MESSAGING OVERLAY: Modern Backdrop Blur Glassmorphism Card with User List + Chat */}
+              {/* MESSAGING OVERLAY: Modern Backdrop Blur Glassmorphism Card with User List + Chat + BizBot AI */}
               {isMessagesOpen && (
-                <div className="fixed sm:absolute inset-x-0 bottom-0 sm:inset-auto sm:right-0 sm:top-14 w-full sm:w-[560px] md:w-[640px] h-[80vh] sm:h-auto sm:max-h-[520px] bg-slate-900/95 backdrop-blur-2xl border-t sm:border border-white/20 text-white shadow-2xl rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 z-50 pointer-events-auto animate-slide-up-bottom sm:animate-in sm:fade-in sm:zoom-in-95 font-sans text-left flex flex-col">
+                <div className="fixed sm:absolute inset-x-0 bottom-0 sm:inset-auto sm:right-0 sm:top-14 w-full sm:w-[580px] md:w-[660px] h-[82vh] sm:h-auto sm:max-h-[540px] bg-slate-900/95 backdrop-blur-2xl border-t sm:border border-white/20 text-white shadow-2xl rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 z-50 pointer-events-auto animate-slide-up-bottom sm:animate-in sm:fade-in sm:zoom-in-95 font-sans text-left flex flex-col">
                   {/* Top Bar Header */}
                   <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3 shrink-0">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-xl bg-indigo-500/30 text-indigo-300 flex items-center justify-center font-bold">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold shadow-md">
                         <MessageSquare className="w-4 h-4" />
                       </div>
                       <div>
                         <span className="font-extrabold text-sm text-white">Direct Business Chat & Inbox</span>
-                        {currentConv && (
+                        {overlayChatTab === 'users' && currentConv && (
                           <span className="text-[10px] text-slate-400 block">Active chat with {currentConv.otherParticipant.name}</span>
+                        )}
+                        {overlayChatTab === 'bot' && (
+                          <span className="text-[10px] text-purple-300 block">24/7 Automated Business AI Assistant</span>
                         )}
                       </div>
                     </div>
 
                     <button 
                       onClick={onOpenMessages} 
-                      className="p-1 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                      className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Mobile Tab Switcher Strip (Visible on mobile only < sm) */}
-                  <div className="flex sm:hidden bg-slate-950/70 p-1 rounded-xl border border-white/10 mb-3 text-xs shrink-0">
+                  {/* ── Main Tab Switcher Strip: Segmented Modern Glassmorphism ── */}
+                  <div className="grid grid-cols-2 bg-black/40 p-1.5 rounded-2xl border border-white/10 mb-3 text-xs shrink-0 shadow-inner backdrop-blur-md gap-1.5">
                     <button
-                      onClick={() => setMobileChatTab('contacts')}
-                      className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center ${
-                        mobileChatTab === 'contacts' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                      type="button"
+                      onClick={() => setOverlayChatTab('users')}
+                      className={`py-2 px-3 rounded-xl font-extrabold transition-all flex items-center justify-center gap-2 ${
+                        overlayChatTab === 'users'
+                          ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/40 border border-indigo-400/40 scale-[1.01]'
+                          : 'text-slate-400 hover:text-white hover:bg-white/5 font-semibold'
                       }`}
                     >
-                      Contacts ({conversations.length})
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>User Chats</span>
+                      <span className="px-1.5 py-0.2 text-[10px] font-black bg-white/20 text-white rounded-full">
+                        {conversations.length}
+                      </span>
                     </button>
+
                     <button
-                      onClick={() => setMobileChatTab('chat')}
-                      className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1 ${
-                        mobileChatTab === 'chat' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                      type="button"
+                      onClick={() => setOverlayChatTab('bot')}
+                      className={`py-2 px-3 rounded-xl font-extrabold transition-all flex items-center justify-center gap-2 ${
+                        overlayChatTab === 'bot'
+                          ? 'bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-600 text-white shadow-lg shadow-purple-600/40 border border-purple-400/40 scale-[1.01]'
+                          : 'text-slate-400 hover:text-purple-300 hover:bg-white/5 font-semibold'
                       }`}
                     >
-                      <span>Chat</span>
-                      {currentConv && <span className="text-[10px] bg-white/20 px-1.5 rounded-full truncate max-w-[80px]">{currentConv.otherParticipant.name.split(' ')[0]}</span>}
+                      <div className="relative flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-purple-200" />
+                        <Sparkles className="w-2 h-2 text-amber-300 absolute -top-1 -right-1 animate-pulse" />
+                      </div>
+                      <span>BizBot AI</span>
+                      <span className="px-1.5 py-0.2 text-[9px] font-black bg-purple-400/20 text-purple-200 rounded-full border border-purple-400/30">
+                        24/7
+                      </span>
                     </button>
                   </div>
 
-                  {/* Main Grid: Left Users List + Right Chat Box */}
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 flex-1 min-h-0 overflow-hidden">
-                    {/* Left: Contact / Users Inbox List (Span 5 on Desktop, visible on mobile when tab='contacts') */}
-                    <div className={`sm:col-span-5 flex flex-col gap-1.5 overflow-y-auto pr-1 sm:border-r border-white/10 pb-2 sm:pb-0 shrink-0 ${
-                      mobileChatTab === 'contacts' ? 'flex' : 'hidden sm:flex'
-                    }`}>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 px-1">Active Contacts ({conversations.length})</span>
-                      {conversations.map((c) => {
-                        const isSelected = (selectedConvId || conversations[0]?.id) === c.id;
-                        return (
-                          <button
-                            key={c.id}
-                            onClick={() => {
-                              setSelectedConvId(c.id);
-                              setMobileChatTab('chat'); // Switch tab automatically to chat on mobile when selecting a contact
-                            }}
-                            className={`flex items-center gap-2.5 p-2.5 rounded-2xl border text-left transition-all w-full ${
-                              isSelected
-                                ? 'bg-indigo-600/90 border-indigo-400/80 text-white shadow-md'
-                                : 'bg-white/5 border-white/5 text-slate-300 hover:bg-white/10'
-                            }`}
-                          >
-                            <div className="relative shrink-0">
-                              <img src={c.otherParticipant.avatar} alt={c.otherParticipant.name} className="w-9 h-9 rounded-full object-cover border border-white/20" />
-                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="font-bold text-xs truncate">{c.otherParticipant.name}</span>
-                                <span className="text-[9px] text-slate-400 shrink-0">{c.lastMessageTime}</span>
-                              </div>
-                              <span className="text-[10px] text-slate-300 truncate block opacity-80">{c.lastMessage}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Right: Active Chat Conversation Box (Span 7 on Desktop, visible on mobile when tab='chat') */}
-                    <div className={`sm:col-span-7 flex flex-col min-h-0 flex-1 ${
-                      mobileChatTab === 'chat' ? 'flex' : 'hidden sm:flex'
-                    }`}>
-                      {/* Active Contact Header inside Chat View on mobile */}
-                      {currentConv && (
-                        <div className="flex sm:hidden items-center justify-between bg-white/5 p-2 rounded-xl mb-2 border border-white/10">
-                          <div className="flex items-center gap-2">
-                            <img src={currentConv.otherParticipant.avatar} alt={currentConv.otherParticipant.name} className="w-6 h-6 rounded-full object-cover" />
-                            <span className="text-xs font-bold text-white truncate">{currentConv.otherParticipant.name}</span>
-                          </div>
-                          <button 
-                            onClick={() => setMobileChatTab('contacts')} 
-                            className="text-[10px] font-bold text-indigo-300 hover:text-white bg-indigo-600/30 px-2 py-0.5 rounded-lg border border-indigo-400/30"
-                          >
-                            Switch Contact
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Message History Stream */}
-                      <div className="space-y-2 flex-1 overflow-y-auto pr-1 flex flex-col justify-end bg-slate-950/50 p-3 rounded-2xl border border-white/5 mb-2 min-h-0">
-                        {activeConvMessages.length === 0 ? (
-                          <p className="text-center text-xs text-slate-500 py-4">No messages yet. Send a quote inquiry!</p>
-                        ) : (
-                          activeConvMessages.map((m) => {
-                            const isMe = m.senderId === currentUser.id;
+                  {/* ── TAB 1: User Chats Grid ── */}
+                  {overlayChatTab === 'users' && (
+                    <>
+                      {/* Main Grid: Left Users List + Right Chat Box */}
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 flex-1 min-h-0 overflow-hidden">
+                        {/* Left: Contact / Users Inbox List */}
+                        <div className={`sm:col-span-5 flex flex-col gap-1.5 overflow-y-auto pr-1 sm:border-r border-white/10 pb-2 sm:pb-0 shrink-0 ${
+                          mobileChatTab === 'contacts' ? 'flex' : 'hidden sm:flex'
+                        }`}>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 px-1">Active Contacts ({conversations.length})</span>
+                          {conversations.map((c) => {
+                            const isSelected = (selectedConvId || conversations[0]?.id) === c.id;
                             return (
-                              <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] p-2.5 rounded-2xl text-xs leading-normal ${
-                                  isMe ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none'
-                                }`}>
-                                  <p>{m.text}</p>
-                                  <span className="text-[9px] opacity-70 block text-right mt-1">{m.createdAt}</span>
+                              <button
+                                key={c.id}
+                                onClick={() => {
+                                  setSelectedConvId(c.id);
+                                  setMobileChatTab('chat');
+                                }}
+                                className={`flex items-center gap-2.5 p-2.5 rounded-2xl border text-left transition-all w-full ${
+                                  isSelected
+                                    ? 'bg-indigo-600/90 border-indigo-400/80 text-white shadow-md'
+                                    : 'bg-white/5 border-white/5 text-slate-300 hover:bg-white/10'
+                                }`}
+                              >
+                                <div className="relative shrink-0">
+                                  <img src={c.otherParticipant.avatar} alt={c.otherParticipant.name} className="w-9 h-9 rounded-full object-cover border border-white/20" />
+                                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900" />
                                 </div>
-                              </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="font-bold text-xs truncate">{c.otherParticipant.name}</span>
+                                    <span className="text-[9px] text-slate-400 shrink-0">{c.lastMessageTime}</span>
+                                  </div>
+                                  <span className="text-[10px] text-slate-300 truncate block opacity-80">{c.lastMessage}</span>
+                                </div>
+                              </button>
                             );
-                          })
+                          })}
+                        </div>
+
+                        {/* Right: Active Chat Conversation Box */}
+                        <div className={`sm:col-span-7 flex flex-col min-h-0 flex-1 ${
+                          mobileChatTab === 'chat' ? 'flex' : 'hidden sm:flex'
+                        }`}>
+                          {/* Active Contact Header inside Chat View on mobile */}
+                          {currentConv && (
+                            <div className="flex sm:hidden items-center justify-between bg-white/10 p-2.5 rounded-2xl mb-2.5 border border-white/15 shadow-sm shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setMobileChatTab('contacts')}
+                                className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-600/40 px-2.5 py-1 rounded-xl border border-indigo-400/40 active:scale-95 transition-all"
+                              >
+                                <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                                <span>Contacts</span>
+                              </button>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <img src={currentConv.otherParticipant.avatar} alt={currentConv.otherParticipant.name} className="w-6 h-6 rounded-full object-cover border border-white/20" />
+                                <span className="text-xs font-bold text-white truncate max-w-[120px]">{currentConv.otherParticipant.name}</span>
+                                <span className="w-2 h-2 bg-emerald-400 rounded-full shrink-0 animate-pulse" />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Message History Stream */}
+                          <div className="space-y-2 flex-1 overflow-y-auto pr-1 flex flex-col justify-end bg-slate-950/50 p-3 rounded-2xl border border-white/5 mb-2 min-h-0">
+                            {activeConvMessages.length === 0 ? (
+                              <p className="text-center text-xs text-slate-500 py-4">No messages yet. Send a quote inquiry!</p>
+                            ) : (
+                              activeConvMessages.map((m) => {
+                                const isMe = m.senderId === currentUser.id;
+                                return (
+                                  <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[85%] p-2.5 rounded-2xl text-xs leading-normal ${
+                                      isMe ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none'
+                                    }`}>
+                                      <p>{m.text}</p>
+                                      <span className="text-[9px] opacity-70 block text-right mt-1">{m.createdAt}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {/* Quick Message Form Input */}
+                          <form onSubmit={handleSendQuickMessage} className="relative flex items-center shrink-0">
+                            <input
+                              type="text"
+                              value={quickMsgText}
+                              onChange={(e) => setQuickMsgText(e.target.value)}
+                              placeholder="Type a message or price quote..."
+                              className="w-full pl-3 pr-10 py-2.5 bg-slate-950/80 border border-white/20 focus:border-indigo-400 text-xs text-white placeholder-slate-400 rounded-xl focus:outline-none"
+                            />
+                            <button
+                              type="submit"
+                              className="absolute right-1.5 p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* ── TAB 2: BizBot AI Chat Tab ── */}
+                  {overlayChatTab === 'bot' && (
+                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                      {/* Bot Message History Stream */}
+                      <div className="space-y-3 flex-1 overflow-y-auto pr-1 bg-slate-950/50 p-3.5 rounded-2xl border border-white/5 mb-2 min-h-0">
+                        {overlayBotMessages.map((bm) => (
+                          <div key={bm.id} className={`flex flex-col gap-1 ${bm.role === 'user' ? 'items-end' : 'items-start'}`}>
+                            {bm.role === 'bot' && (
+                              <div className="flex items-center gap-1.5 text-[10px] text-purple-300 font-bold px-1">
+                                <Bot className="w-3 h-3" />
+                                <span>BizBot AI</span>
+                              </div>
+                            )}
+                            <div className={`max-w-[88%] p-3 rounded-2xl text-xs leading-relaxed ${
+                              bm.role === 'user'
+                                ? 'bg-indigo-600 text-white rounded-tr-none'
+                                : 'bg-slate-800/90 text-slate-100 rounded-tl-none border border-white/10'
+                            }`}>
+                              <p className="whitespace-pre-line">{bm.text}</p>
+                              <span className="text-[9px] opacity-60 block text-right mt-1">{bm.time}</span>
+                            </div>
+
+                            {/* Bot follow-up suggestions */}
+                            {bm.role === 'bot' && bm.followUps && (
+                              <div className="flex flex-wrap gap-1 mt-1 max-w-[90%]">
+                                {bm.followUps.map((fu) => (
+                                  <button
+                                    key={fu}
+                                    type="button"
+                                    onClick={() => handleSendOverlayBot(fu)}
+                                    className="text-[10px] bg-white/10 hover:bg-purple-600/50 border border-white/15 text-purple-200 font-bold px-2 py-0.5 rounded-full transition-all active:scale-95"
+                                  >
+                                    {fu}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {isOverlayBotTyping && (
+                          <div className="flex items-center gap-1.5 bg-slate-800/80 px-3 py-2 rounded-2xl text-xs text-purple-300 w-fit">
+                            <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" />
+                            <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <span className="text-[10px] ml-1">BizBot is thinking...</span>
+                          </div>
                         )}
                       </div>
 
-                      {/* Quick Message Form Input */}
-                      <form onSubmit={handleSendQuickMessage} className="relative flex items-center shrink-0">
+                      {/* Bot Quick Message Form Input */}
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleSendOverlayBot();
+                        }}
+                        className="relative flex items-center shrink-0"
+                      >
                         <input
                           type="text"
-                          value={quickMsgText}
-                          onChange={(e) => setQuickMsgText(e.target.value)}
-                          placeholder="Type a message or price quote..."
-                          className="w-full pl-3 pr-10 py-2.5 bg-slate-950/80 border border-white/20 focus:border-indigo-400 text-xs text-white placeholder-slate-400 rounded-xl focus:outline-none"
+                          value={overlayBotInput}
+                          onChange={(e) => setOverlayBotInput(e.target.value)}
+                          placeholder="Ask BizBot about orders, verification, fees, listings..."
+                          className="w-full pl-3 pr-10 py-2.5 bg-slate-950/80 border border-white/20 focus:border-purple-400 text-xs text-white placeholder-slate-400 rounded-xl focus:outline-none"
                         />
                         <button
                           type="submit"
-                          className="absolute right-1.5 p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
+                          disabled={!overlayBotInput.trim() || isOverlayBotTyping}
+                          className="absolute right-1.5 p-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-40 text-white rounded-lg transition-all"
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>
                       </form>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -581,15 +796,28 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {/* Menu Options */}
                   <div className="py-1">
+                    {onOpenProfile && (
+                      <button
+                        onClick={() => {
+                          onOpenProfile(currentUser.id);
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs font-bold text-slate-800 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <UserCheck className="w-4 h-4 text-indigo-600" />
+                        <span>View My Profile & Posts</span>
+                      </button>
+                    )}
+
                     <button
                       onClick={() => {
                         setActiveTab('settings');
                         setShowProfileMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors"
+                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors cursor-pointer"
                     >
                       <Settings className="w-4 h-4 text-slate-400" />
-                      <span>Settings & Privacy</span>
+                      <span>Profile & Settings</span>
                     </button>
 
                     <button
@@ -603,16 +831,6 @@ export const Header: React.FC<HeaderProps> = ({
                       <span>Help & Support</span>
                     </button>
 
-                    <button
-                      onClick={() => {
-                        if (onOpenSwitchAccount) onOpenSwitchAccount();
-                        setShowProfileMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors"
-                    >
-                      <UserCheck className="w-4 h-4 text-slate-400" />
-                      <span>Switch Account</span>
-                    </button>
                   </div>
 
                   {/* Logout Button */}
@@ -635,8 +853,8 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Mobile & Tablet Search Bar with Right Drawer Button (visible on <= 880px) */}
-        <div className="pt-2 pb-2 border-t border-slate-100 min-[881px]:hidden w-full flex items-stretch gap-2">
+        {/* Mobile & Tablet Search Bar with Right Drawer Button (visible on <= 880px, hidden in full-screen) */}
+        <div className={`pt-2 pb-2 border-t border-slate-100 min-[881px]:hidden w-full flex items-stretch gap-2 ${isFullScreen ? 'hidden' : ''}`}>
           <div className="relative flex-1 flex items-center h-10">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5" />
             <input
@@ -669,8 +887,8 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Primary View Navigation Tabs */}
-        <div className="relative hidden sm:flex items-center border-t border-slate-100/80 pt-2 pb-1.5 w-full min-w-0 overflow-hidden">
+        {/* Primary View Navigation Tabs — hidden on full-screen pages */}
+        <div className={`relative sm:flex items-center border-t border-slate-100/80 pt-2 pb-1.5 w-full min-w-0 overflow-hidden ${isFullScreen ? 'hidden' : 'hidden sm:flex'}`}>
           {canNavScrollLeft && (
             <button
               onClick={() => scrollMainNav('left')}

@@ -13,6 +13,7 @@ import {
   AnalyticsData
 } from '../types';
 
+// Essential Minimal Core Users for Client-Side Initial State
 export const INITIAL_USERS: User[] = [
   {
     id: 'usr_buyer_1',
@@ -21,8 +22,8 @@ export const INITIAL_USERS: User[] = [
     email: 'elena@example.com',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     coverImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&auto=format&fit=crop&q=80',
-    role: 'buyer',
-    bio: 'Avid supporter of local small businesses & sustainable crafts. 🌿',
+    role: 'buyer_free',
+    bio: 'Standard Buyer (Free Tier) — Supporter of local small businesses & sustainable crafts. 🌿',
     isVerified: false,
     subscriptionStatus: 'free',
     location: 'Portland, OR',
@@ -32,6 +33,27 @@ export const INITIAL_USERS: User[] = [
     reviewsCount: 12,
     totalSales: 0,
     createdAt: '2025-01-15'
+  },
+  {
+    id: 'usr_buyer_premium',
+    name: 'Liam Vance (VIP Buyer)',
+    username: 'liam_vip_buyer',
+    email: 'liam@vancedynamics.com',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80',
+    role: 'buyer_premium',
+    companyName: 'Vance Dynamics Corp',
+    bio: 'VIP Premium Buyer — Corporate bulk purchasing, priority escrow & wholesale sourcing.',
+    isVerified: true,
+    verificationBadgeType: 'b2b_verified',
+    subscriptionStatus: 'premium',
+    location: 'New York, NY',
+    followersCount: 890,
+    followingCount: 240,
+    rating: 5.0,
+    reviewsCount: 38,
+    totalSales: 0,
+    createdAt: '2024-06-20'
   },
   {
     id: 'usr_seller_free',
@@ -50,7 +72,8 @@ export const INITIAL_USERS: User[] = [
     rating: 4.8,
     reviewsCount: 45,
     totalSales: 112,
-    createdAt: '2024-10-01'
+    createdAt: '2024-10-01',
+    customCategories: ['Ceramics & Mugs', 'Home Planters', 'Dinnerware Collections']
   },
   {
     id: 'usr_seller_premium',
@@ -70,7 +93,8 @@ export const INITIAL_USERS: User[] = [
     reviewsCount: 230,
     totalSales: 1450,
     createdAt: '2024-03-12',
-    customStorefrontUrl: 'nordic-timber.bizsocial.com'
+    customStorefrontUrl: 'nordic-timber.bizsocial.com',
+    customCategories: ['Ergonomic Desk Gear', 'Vintage Furniture', 'Woodworking & Tools', 'Bulk Wholesale Lumber']
   },
   {
     id: 'usr_admin_1',
@@ -78,7 +102,9 @@ export const INITIAL_USERS: User[] = [
     username: 'sarah_admin',
     email: 'admin@bizsocial.com',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80',
     role: 'admin',
+    companyName: 'BizSocial Inc (Admin Team)',
     bio: 'BizSocial Platform Administrator & Merchant Growth Manager.',
     isVerified: true,
     subscriptionStatus: 'premium',
@@ -91,30 +117,13 @@ export const INITIAL_USERS: User[] = [
     createdAt: '2024-01-01'
   },
   {
-    id: 'usr_moderator_1',
-    name: 'Marcus Vance (Trust & Safety)',
-    username: 'marcus_mod',
-    email: 'mod@bizsocial.com',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    role: 'moderator',
-    bio: 'Community guidelines enforcement & dispute resolution specialist.',
-    isVerified: true,
-    subscriptionStatus: 'premium',
-    location: 'Chicago, IL',
-    followersCount: 3100,
-    followingCount: 200,
-    rating: 4.95,
-    reviewsCount: 40,
-    totalSales: 0,
-    createdAt: '2024-02-15'
-  },
-  {
     id: 'usr_procurement_1',
     name: 'BizSocial Official Buy Desk',
     username: 'bizsocial_buydesk',
     email: 'procurement@bizsocial.com',
-    avatar: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=150&auto=format&fit=crop&q=80',
+    avatar: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80',
     role: 'procurement',
+    companyName: 'Apex Capital Procurement',
     bio: 'Official direct purchasing division of BizSocial. We buy inventory directly from small businesses!',
     isVerified: true,
     subscriptionStatus: 'premium',
@@ -129,183 +138,107 @@ export const INITIAL_USERS: User[] = [
 ];
 
 export const INITIAL_LISTINGS: Listing[] = [
-  // 1. New Products
   {
-    id: 'lst_101',
-    title: 'Handmade Stoneware Ceramic Coffee Mug (12oz)',
-    description: 'Ergonomic matte white stoneware coffee cup fired at 2200°F. Dishwasher and microwave safe.',
+    id: 'lst_pizza_01',
+    title: 'Artisanal Wood-Fired Sourdough Pizza (Custom Made)',
+    description: 'Slow-fermented 72-hour organic sourdough crust baked in a 900°F Italian oak-fired brick oven. Customize your size, crust style, gourmet sauces, and premium extra toppings.',
     category: 'new_products',
+    storeCategory: 'Artisanal Bakery & Pizzeria',
     condition: 'new',
-    price: 34.00,
-    originalPrice: 42.00,
-    images: [
-      'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=800&auto=format&fit=crop&q=80'
+    price: 18.00,
+    originalPrice: 22.00,
+    optionSections: [
+      {
+        id: 'sec_size',
+        title: 'Select Pizza Size',
+        type: 'single',
+        isRequired: true,
+        items: [
+          { id: 'opt_sz_10', name: '10" Personal Crust (6 Slices)', priceDelta: 0, isDefault: true },
+          { id: 'opt_sz_14', name: '14" Medium Crust (8 Slices)', priceDelta: 6.00 },
+          { id: 'opt_sz_18', name: '18" Party Size Jumbo (12 Slices)', priceDelta: 12.00 }
+        ]
+      },
+      {
+        id: 'sec_crust',
+        title: 'Crust Style & Seasoning',
+        type: 'single',
+        isRequired: true,
+        items: [
+          { id: 'opt_cr_nap', name: 'Classic Neapolitan (Soft & Airy)', priceDelta: 0, isDefault: true },
+          { id: 'opt_cr_garlic', name: 'Garlic Butter Herb Glazed Crust', priceDelta: 1.50 },
+          { id: 'opt_cr_cheese', name: 'Mozzarella Stuffed Crust Ring', priceDelta: 3.50 }
+        ]
+      },
+      {
+        id: 'sec_toppings',
+        title: 'Gourmet Extra Toppings',
+        type: 'multiple',
+        isRequired: false,
+        items: [
+          { id: 'opt_top_burrata', name: 'Fresh Creamy Burrata Cheese Ball', priceDelta: 4.50 },
+          { id: 'opt_top_truffle', name: 'Black Summer Truffle Oil Drizzle', priceDelta: 3.00 },
+          { id: 'opt_top_basil', name: 'Organic Fresh Genovese Basil Leaves', priceDelta: 1.00 },
+          { id: 'opt_top_parm', name: 'Aged 24-Month Parmigiano-Reggiano', priceDelta: 2.50 }
+        ]
+      }
     ],
-    location: 'Austin, TX',
+    variants: [
+      { id: 'var_piz_dine', name: 'Dine-In Hot & Fresh', priceDelta: 0, inStock: true, isDefault: true },
+      { id: 'var_piz_take', name: 'Takeaway Insulated Box', priceDelta: 1.00, inStock: true },
+      { id: 'var_piz_frozen', name: 'Flash-Frozen Bake-at-Home Pack', priceDelta: -2.00, inStock: true }
+    ],
+    images: [
+      'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&auto=format&fit=crop&q=80'
+    ],
     sellerId: 'usr_seller_free',
     sellerName: 'Craft & Clay Pottery',
     sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: false,
+    isVerifiedSeller: true,
     isFeatured: true,
     likesCount: 84,
-    viewsCount: 620,
-    status: 'active',
-    tags: ['handmade', 'ceramics', 'coffee', 'kitchen'],
-    createdAt: '2026-08-01',
-    stockQty: 18
-  },
-  {
-    id: 'lst_102',
-    title: 'Walnut Wood MagSafe Floating Desk Stand',
-    description: 'Crafted from 100% sustainable American Black Walnut with brass accent feet. Fits all phone sizes.',
-    category: 'new_products',
-    condition: 'new',
-    price: 89.00,
-    originalPrice: 110.00,
-    images: [
-      'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?w=800&auto=format&fit=crop&q=80'
-    ],
-    location: 'Seattle, WA',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    isFeatured: true,
-    likesCount: 245,
-    viewsCount: 1840,
-    status: 'active',
-    tags: ['woodworking', 'magsafe', 'desksetup', 'minimalist'],
-    createdAt: '2026-08-05',
-    stockQty: 35
-  },
-
-  // 2. Second-hand/Used
-  {
-    id: 'lst_201',
-    title: 'Refurbished Vintage Leather Chesterfield Armchair',
-    description: 'Restored 1980s cognac brown full-grain leather armchair. Conditioned with organic beeswax emulsion.',
-    category: 'second_hand',
-    condition: 'refurbished',
-    price: 450.00,
-    originalPrice: 1200.00,
-    images: [
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=800&auto=format&fit=crop&q=80'
-    ],
-    location: 'Portland, OR',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    isFeatured: false,
-    likesCount: 112,
-    viewsCount: 930,
-    status: 'active',
-    tags: ['vintage', 'leather', 'furniture', 'refurbished'],
-    createdAt: '2026-08-03',
-    stockQty: 1
-  },
-  {
-    id: 'lst_202',
-    title: 'Pre-owned Fujifilm x100V Digital Camera (Silver)',
-    description: 'Excellent condition with only 1,200 shutter actuations. Comes with original leather strap, lens hood, and 2 batteries.',
-    category: 'second_hand',
-    condition: 'used',
-    price: 1250.00,
-    originalPrice: 1599.00,
-    images: [
-      'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&auto=format&fit=crop&q=80'
-    ],
+    viewsCount: 650,
     location: 'Austin, TX',
-    sellerId: 'usr_buyer_1',
-    sellerName: 'Elena Rostova',
-    sellerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: false,
-    isFeatured: false,
-    likesCount: 198,
-    viewsCount: 1420,
+    stockQty: 25,
     status: 'active',
-    tags: ['fujifilm', 'camera', 'photography', 'secondhand'],
-    createdAt: '2026-08-07',
-    stockQty: 1
+    tags: ['#pizza', '#sourdough', '#artisanal', '#foodie', '#craftfood'],
+    createdAt: '2 hours ago'
   },
-
-  // 3. Services Marketplace
   {
-    id: 'lst_301',
-    title: 'Custom Brand Identity & Web Design Package',
-    description: 'Complete visual identity overhaul for small business owners including logo suite, typography rules, color palette & Figma layout.',
-    category: 'services',
-    condition: 'service',
-    price: 650.00,
-    images: [
-      'https://images.unsplash.com/photo-1542744094-3a31727202b3?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80'
-    ],
-    location: 'Remote / Nationwide',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    isFeatured: true,
-    likesCount: 310,
-    viewsCount: 2100,
-    status: 'active',
-    tags: ['branding', 'freelance', 'webdesign', 'services'],
-    createdAt: '2026-07-28'
-  },
-
-  // 4. Rental Marketplace
-  {
-    id: 'lst_401',
-    title: 'Professional Commercial Woodworking Table Saw & Router Kit',
-    description: 'Heavy duty SawStop 3HP Cabinet Saw available for daily or weekly shop rental. Ideal for local contractors & hobbyists.',
-    category: 'rentals',
-    condition: 'rental',
-    price: 75.00,
-    rentalPeriod: 'per_day',
-    images: [
-      'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=800&auto=format&fit=crop&q=80'
-    ],
-    location: 'Seattle, WA',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    isFeatured: true,
-    likesCount: 67,
-    viewsCount: 510,
-    status: 'active',
-    tags: ['tools', 'rental', 'woodworking', 'seattle'],
-    createdAt: '2026-08-04'
-  },
-
-  // 5. Wholesale / B2B Section
-  {
-    id: 'lst_501',
-    title: 'B2B Wholesale Raw Walnut & Oak Timber Plank Bundle (50 Board Feet)',
-    description: 'Kiln-dried 4/4 select grade American Walnut planks for furniture makers & boutique carpenters. Bulk discount pricing.',
-    category: 'wholesale_b2b',
+    id: 'lst_wood_01',
+    title: 'Solid Walnut Executive Standing Desk (Motorized)',
+    description: '100% sustainably harvested American black walnut desktop with dual-motor quiet lift mechanism, programmable height presets, and integrated wire management.',
+    category: 'new_products',
+    storeCategory: 'Ergonomic Desk Gear',
     condition: 'new',
-    price: 480.00,
-    wholesaleMinQty: 2,
-    images: [
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80'
+    price: 899.00,
+    originalPrice: 1150.00,
+    variants: [
+      { id: 'var_60', name: '60" x 30" Standard Desktop', priceDelta: 0, inStock: true, isDefault: true },
+      { id: 'var_72', name: '72" x 36" Executive Studio Size', priceDelta: 250.00, inStock: true }
     ],
-    location: 'Seattle, WA Warehouse',
+    features: [
+      { id: 'feat_power', name: 'Flush-Mount USB-C + AC Power Hub', price: 49.00, description: 'Dual 65W PD ports + 2 surge outlets' },
+      { id: 'feat_caster', name: 'Heavy-Duty Locking Polyurethane Casters', price: 29.00, description: 'Smooth 360° floor-safe wheels' }
+    ],
+    images: [
+      'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&auto=format&fit=crop&q=80'
+    ],
     sellerId: 'usr_seller_premium',
     sellerName: 'Nordic Timber & Tech',
     sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     isVerifiedSeller: true,
     isFeatured: true,
     likesCount: 142,
-    viewsCount: 1100,
+    viewsCount: 1280,
+    location: 'Seattle, WA',
+    stockQty: 8,
     status: 'active',
-    tags: ['wholesale', 'b2b', 'lumber', 'timber', 'rawmaterials'],
-    createdAt: '2026-08-02',
-    stockQty: 50
+    tags: ['#woodworking', '#standingdesk', '#workfromhome', '#walnut'],
+    createdAt: '1 day ago'
   }
 ];
 
@@ -316,17 +249,17 @@ export const INITIAL_POSTS: Post[] = [
     sellerName: 'Nordic Timber & Tech',
     sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     isVerifiedSeller: true,
-    content: 'Fresh out of the oil bath! Our brand new Walnut MagSafe Floating Desk Stands are officially back in stock! Each piece features unique grain patterns harvested from local sustainable timber. 🪵⚡️',
+    content: 'Just finished unboxing a fresh batch of kiln-dried American Walnut slabs! Check out the grain pattern on this 72" executive standing desk. Available now with Escrow purchase protection.',
     mediaUrls: [
-      'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=800&auto=format&fit=crop&q=80'
     ],
     postType: 'product',
-    listingId: 'lst_102',
-    listingTitle: 'Walnut Wood MagSafe Floating Desk Stand',
-    listingPrice: 89.00,
-    likesCount: 342,
+    listingId: 'lst_wood_01',
+    listingTitle: 'Solid Walnut Executive Standing Desk',
+    listingPrice: 899.00,
+    likesCount: 148,
     isLiked: false,
-    commentsCount: 28,
+    commentsCount: 22,
     comments: [
       {
         id: 'c1',
@@ -334,201 +267,77 @@ export const INITIAL_POSTS: Post[] = [
         userId: 'usr_buyer_1',
         userName: 'Elena Rostova',
         userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        text: 'Does this hold the iPhone 15 Pro Max securely in landscape mode?',
-        createdAt: '2 hours ago'
-      },
-      {
-        id: 'c2',
-        postId: 'post_1',
-        userId: 'usr_seller_premium',
-        userName: 'Nordic Timber & Tech',
-        userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        text: 'Yes Elena! It uses N52 neodymium magnet rings for ultra strong grip in both orientations.',
+        text: 'The walnut finish looks stunning! What is the lead time for shipping to Oregon?',
         createdAt: '1 hour ago'
       }
     ],
-    sharesCount: 14,
-    hashtags: ['#woodworking', '#desksetup', '#handmade', '#smallbiz'],
+    sharesCount: 15,
+    hashtags: ['#woodworking', '#standingdesk', '#artisancraft', '#BizSocial'],
     createdAt: '3 hours ago'
-  },
-  {
-    id: 'post_2',
-    sellerId: 'usr_seller_free',
-    sellerName: 'Craft & Clay Pottery',
-    sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: false,
-    content: 'Kiln opening morning is always like Christmas! Opening up batch #42 of stoneware espresso cups. Which color glaze is your favorite? ☕️🎨',
-    mediaUrls: [
-      'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?w=800&auto=format&fit=crop&q=80'
-    ],
-    postType: 'product',
-    listingId: 'lst_101',
-    listingTitle: 'Handmade Stoneware Ceramic Coffee Mug',
-    listingPrice: 34.00,
-    likesCount: 189,
-    isLiked: true,
-    commentsCount: 12,
-    comments: [],
-    sharesCount: 5,
-    hashtags: ['#ceramics', '#pottery', '#coffee', '#artisan'],
-    createdAt: '6 hours ago'
-  },
-  {
-    id: 'post_3',
-    sellerId: 'usr_procurement_1',
-    sellerName: 'BizSocial Official Buy Desk',
-    sellerAvatar: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    content: '📢 SMALL BUSINESS OWNERS: Looking for instant cashflow? Use our "Sell to Us" direct offer feature! Submit your surplus inventory or equipment directly to our procurement team for 24-48hr buyout offers.',
-    mediaUrls: [
-      'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=80'
-    ],
-    postType: 'update',
-    likesCount: 512,
-    isLiked: false,
-    commentsCount: 42,
-    comments: [],
-    sharesCount: 88,
-    hashtags: ['#SellToUs', '#B2B', '#SmallBusinessSupport', '#Cashflow'],
-    createdAt: '1 day ago'
   }
 ];
 
 export const INITIAL_STORIES: Story[] = [
   {
-    id: 'str_1',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    mediaUrl: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop&q=80',
-    caption: 'Behind the scenes in our woodworking workshop today! 🪚',
-    expiresAt: '2026-08-11T12:00:00Z',
-    createdAt: '2 hours ago',
-    viewCount: 184
-  },
-  {
-    id: 'str_2',
+    id: 'st_1',
     sellerId: 'usr_seller_free',
     sellerName: 'Craft & Clay',
     sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: false,
-    mediaUrl: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&auto=format&fit=crop&q=80',
-    caption: 'Glaze testing on fresh clay bodies 🏺✨',
-    expiresAt: '2026-08-11T16:00:00Z',
-    createdAt: '5 hours ago',
-    viewCount: 96
+    isVerifiedSeller: true,
+    mediaUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
+    caption: 'Fresh batch of sourdough pies just pulled from the brick oven! 🔥🍕',
+    expiresAt: '20 hours',
+    createdAt: '4 hours ago',
+    viewCount: 238
   }
 ];
 
 export const INITIAL_DIRECT_OFFERS: DirectOffer[] = [
   {
-    id: 'off_001',
+    id: 'off_101',
     sellerId: 'usr_seller_free',
     sellerName: 'Craft & Clay Pottery',
     sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     isPremiumSeller: false,
-    title: 'Surplus Kiln Shelves & Refractory Bricks Lot (20 pcs)',
+    title: 'Surplus Commercial Kiln & Studio Pottery Stock (120 Pcs)',
     category: 'second_hand',
     condition: 'used',
-    expectedPrice: 280.00,
-    description: 'High-alumina cordierite kiln shelves with minor glaze drips. Cleaned and ready for firing.',
+    expectedPrice: 4200.00,
+    description: 'Full studio liquidation including Olympic 18" electric kiln and glazed ceramic dinnerware batch.',
     images: [
       'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&auto=format&fit=crop&q=80'
     ],
     location: 'Austin, TX',
     status: 'under_review',
-    adminNotes: 'Assigned to senior procurement analyst. Inspecting photo condition.',
+    createdAt: 'Yesterday',
+    expiresAt: 'In 6 days',
     history: [
       {
-        status: 'submitted',
-        timestamp: '2026-08-09T10:00:00Z',
-        note: 'Offer submitted by seller.'
-      },
-      {
         status: 'under_review',
-        timestamp: '2026-08-09T11:30:00Z',
-        note: 'Procurement team reviewing price & condition.'
+        timestamp: 'Yesterday',
+        note: 'Submitted for corporate direct buyout assessment'
       }
-    ],
-    createdAt: '2026-08-09',
-    expiresAt: '2026-08-12'
-  },
-  {
-    id: 'off_002',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isPremiumSeller: true,
-    title: 'Bulk Overstock Industrial Router Bits (Set of 15)',
-    category: 'wholesale_b2b',
-    condition: 'new',
-    expectedPrice: 420.00,
-    counterPrice: 380.00,
-    description: 'Carbide tipped industrial spiral router bits unopened in protective storage cases.',
-    images: [
-      'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=800&auto=format&fit=crop&q=80'
-    ],
-    location: 'Seattle, WA',
-    status: 'counter_offered',
-    adminNotes: 'Offered $380 based on standard B2B resale index.',
-    history: [
-      {
-        status: 'submitted',
-        timestamp: '2026-08-08T09:00:00Z',
-        note: 'Submitted via Priority Premium Queue.'
-      },
-      {
-        status: 'under_review',
-        timestamp: '2026-08-08T09:15:00Z',
-        note: 'Fast-tracked review.'
-      },
-      {
-        status: 'counter_offered',
-        timestamp: '2026-08-08T14:00:00Z',
-        note: 'Counter-offer of $380 sent to seller.',
-        updatedBy: 'BizSocial Buy Desk'
-      }
-    ],
-    createdAt: '2026-08-08',
-    expiresAt: '2026-08-11'
+    ]
   }
 ];
 
 export const INITIAL_ORDERS: Order[] = [
   {
-    id: 'ord_1001',
+    id: 'ORD-98231',
     buyerId: 'usr_buyer_1',
     buyerName: 'Elena Rostova',
     sellerId: 'usr_seller_free',
     sellerName: 'Craft & Clay Pottery',
-    listingId: 'lst_101',
-    listingTitle: 'Handmade Stoneware Ceramic Coffee Mug',
-    listingImage: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
-    price: 34.00,
-    totalAmount: 38.50,
+    listingId: 'lst_pizza_01',
+    listingTitle: 'Artisanal Wood-Fired Sourdough Pizza (x2)',
+    listingImage: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
+    price: 18.00,
+    totalAmount: 40.50,
     status: 'escrow_held',
     escrowStatus: 'held',
+    trackingNumber: 'TRK78392104',
     shippingAddress: '742 Evergreen Terrace, Portland, OR',
-    createdAt: '2026-08-08'
-  },
-  {
-    id: 'ord_1002',
-    buyerId: 'usr_buyer_1',
-    buyerName: 'Elena Rostova',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    listingId: 'lst_102',
-    listingTitle: 'Walnut Wood MagSafe Floating Desk Stand',
-    listingImage: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&auto=format&fit=crop&q=80',
-    price: 89.00,
-    totalAmount: 96.00,
-    status: 'delivered',
-    escrowStatus: 'held',
-    trackingNumber: 'UPS-920148109',
-    shippingAddress: '742 Evergreen Terrace, Portland, OR',
-    createdAt: '2026-08-04'
+    createdAt: '2 hours ago'
   }
 ];
 
@@ -542,140 +351,91 @@ export const INITIAL_CONVERSATIONS: Conversation[] = [
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
       role: 'seller_premium'
     },
-    lastMessage: 'Your custom walnut desk stand order has shipped!',
-    lastMessageTime: '10:15 AM',
+    lastMessage: 'Your custom walnut desk order has been confirmed with Escrow deposit protection!',
+    lastMessageTime: '10:45 AM',
     unreadCount: 1
-  },
-  {
-    id: 'conv_2',
-    participantIds: ['usr_buyer_1', 'usr_seller_free'],
-    otherParticipant: {
-      id: 'usr_seller_free',
-      name: 'Craft & Clay Pottery',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-      role: 'seller_free'
-    },
-    lastMessage: 'Is local pickup available in Austin?',
-    lastMessageTime: 'Yesterday',
-    unreadCount: 0
   }
 ];
 
 export const INITIAL_MESSAGES: Message[] = [
   {
-    id: 'm1',
+    id: 'msg_1',
+    conversationId: 'conv_1',
+    senderId: 'usr_seller_premium',
+    senderName: 'Nordic Timber & Tech',
+    text: 'Hello Elena! We received your inquiry regarding custom 72" desktop dimensions.',
+    isRead: true,
+    createdAt: '10:30 AM'
+  },
+  {
+    id: 'msg_2',
     conversationId: 'conv_1',
     senderId: 'usr_buyer_1',
     senderName: 'Elena Rostova',
-    text: 'Hi! I just purchased the Walnut MagSafe Stand. Super excited!',
+    text: 'Awesome! Can we proceed with the Walnut finish and power hub?',
     isRead: true,
-    createdAt: 'Yesterday 3:00 PM'
+    createdAt: '10:38 AM'
   },
   {
-    id: 'm2',
+    id: 'msg_3',
     conversationId: 'conv_1',
     senderId: 'usr_seller_premium',
     senderName: 'Nordic Timber & Tech',
-    text: 'Thank you Elena! We are carefully hand-finishing your unit right now with natural mineral oil.',
-    isRead: true,
-    createdAt: 'Yesterday 3:15 PM'
-  },
-  {
-    id: 'm3',
-    conversationId: 'conv_1',
-    senderId: 'usr_seller_premium',
-    senderName: 'Nordic Timber & Tech',
-    text: 'Your custom walnut desk stand order has shipped! Tracking: UPS-920148109 📦',
+    text: 'Your custom walnut desk order has been confirmed with Escrow deposit protection!',
     isRead: false,
-    createdAt: '10:15 AM'
+    createdAt: '10:45 AM'
   }
 ];
 
 export const INITIAL_NOTIFICATIONS: AppNotification[] = [
   {
     id: 'notif_1',
-    userId: 'usr_seller_premium',
-    type: 'order',
-    title: 'New Escrow Payment Held ($96.00)',
-    body: 'Elena Rostova purchased Walnut Wood MagSafe Stand.',
-    isRead: false,
-    createdAt: '2 hours ago'
-  },
-  {
-    id: 'notif_2',
-    userId: 'usr_seller_free',
-    type: 'offer_update',
-    title: 'Direct Offer Status Updated',
-    body: 'Procurement team moved offer off_001 to Under Review.',
-    isRead: true,
-    createdAt: '1 day ago'
-  },
-  {
-    id: 'notif_3',
     userId: 'usr_buyer_1',
-    type: 'price_drop',
-    title: 'Price Drop Alert! 📉',
-    body: 'Fujifilm x100V is now $1,250.00 (down from $1,350)',
+    type: 'order',
+    title: 'Escrow Payment Secured 🔒',
+    body: 'Funds for Order #ORD-98231 are locked in neutral Escrow. Release payout only after delivery confirmation.',
     isRead: false,
-    createdAt: '3 hours ago'
+    createdAt: '10 mins ago'
   }
 ];
 
 export const INITIAL_REVIEWS: Review[] = [
   {
     id: 'rev_1',
-    sellerId: 'usr_seller_premium',
-    buyerId: 'usr_buyer_1',
-    buyerName: 'Elena Rostova',
-    buyerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    rating: 5,
-    comment: 'Unboxing was a dream! The solid walnut finish is buttery smooth and the MagSafe magnet holds strong even through my thick phone case. Verified real quality craft.',
-    photoUrl: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&auto=format&fit=crop&q=80',
-    listingTitle: 'Walnut Wood MagSafe Floating Desk Stand',
-    createdAt: '2026-08-06'
-  },
-  {
-    id: 'rev_2',
     sellerId: 'usr_seller_free',
     buyerId: 'usr_buyer_1',
     buyerName: 'Elena Rostova',
     buyerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     rating: 5,
-    comment: 'The mug holds heat exceptionally well. Beautiful subtle pottery glaze variations!',
-    photoUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop&q=80',
-    listingTitle: 'Handmade Stoneware Ceramic Coffee Mug',
-    createdAt: '2026-08-02'
+    comment: 'Exceptional craftsmanship and swift fulfillment! Escrow transaction was completely seamless.',
+    createdAt: '3 days ago'
   }
 ];
 
 export const INITIAL_DISPUTES: Dispute[] = [
   {
-    id: 'disp_001',
-    orderId: 'ord_9021',
-    buyerName: 'Alex Mercer',
-    sellerName: 'Vintage Thrift Hub',
-    reason: 'Item condition not as described - minor chip on rim',
-    status: 'under_investigation',
-    amount: 65.00,
-    createdAt: '2026-08-07'
+    id: 'disp_1',
+    orderId: 'ORD-89210',
+    buyerName: 'Elena Rostova',
+    sellerName: 'Craft & Clay Pottery',
+    amount: 140.00,
+    reason: 'Ceramic tea set arrived with 2 broken saucers due to carrier transit damage.',
+    status: 'open',
+    createdAt: '5 hours ago'
   }
 ];
 
 export const INITIAL_ANALYTICS: AnalyticsData = {
-  views: 8420,
-  clicks: 1940,
+  views: 8940,
+  clicks: 1420,
   conversionRate: 4.8,
-  totalRevenue: 12450.00,
+  totalRevenue: 28450.00,
   followerGrowth: [
-    { date: 'Aug 1', count: 4200 },
-    { date: 'Aug 3', count: 4350 },
-    { date: 'Aug 5', count: 4520 },
-    { date: 'Aug 7', count: 4710 },
-    { date: 'Aug 9', count: 4890 }
+    { date: 'Mon', count: 120 },
+    { date: 'Wed', count: 240 },
+    { date: 'Fri', count: 390 }
   ],
   topProducts: [
-    { id: 'lst_102', title: 'Walnut MagSafe Stand', views: 1840, sales: 48 },
-    { id: 'lst_501', title: 'Wholesale Walnut Timber', views: 1100, sales: 12 },
-    { id: 'lst_301', title: 'Brand Identity Package', views: 2100, sales: 8 }
+    { id: 'lst_wood_01', title: 'Solid Walnut Executive Standing Desk', views: 1280, sales: 8 }
   ]
 };
