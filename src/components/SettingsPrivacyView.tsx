@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { User } from '../types';
@@ -35,11 +35,78 @@ interface SettingsPrivacyViewProps {
   allUsers?: User[];
 }
 
-type SubTab = 'profile' | 'network' | 'security' | 'privacy' | 'notifications' | 'billing';
+type SubTab = 'profile' | 'payment_method' | 'network' | 'security' | 'privacy' | 'notifications' | 'billing';
 type NetworkTab = 'following' | 'followers' | 'connections';
 
 export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ currentUser, onUpdateUser, allUsers = [] }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('profile');
+  
+  // Chain Hook Payment Method State
+  const [chainHookClientName, setChainHookClientName] = useState('');
+  const [chainHookApiKey, setChainHookApiKey] = useState('');
+  const [isPaymentConfigured, setIsPaymentConfigured] = useState(false);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [paymentSaveSuccess, setPaymentSaveSuccess] = useState(false);
+  const [paymentSaveError, setPaymentSaveError] = useState<string | null>(null);
+
+  // Fetch current payment platform settings on mount
+  React.useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        const numUserId = parseInt(currentUser.id.replace(/\D/g, ''), 10) || 1;
+        const res = await fetch(`/api/payment/settings?user_id=${numUserId}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            setChainHookClientName(json.data.client_name || '');
+            setChainHookApiKey(json.data.api_key || '');
+            setIsPaymentConfigured(Boolean(json.data.client_name && json.data.api_key));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load payment settings:', err);
+      }
+    };
+    fetchPaymentSettings();
+  }, [currentUser.id]);
+
+  const handleSavePaymentSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chainHookClientName.trim() || !chainHookApiKey.trim()) {
+      setPaymentSaveError('Both Client Name and API Key are required.');
+      return;
+    }
+
+    setIsSavingPayment(true);
+    setPaymentSaveError(null);
+    setPaymentSaveSuccess(false);
+
+    try {
+      const numUserId = parseInt(currentUser.id.replace(/\D/g, ''), 10) || 1;
+      const res = await fetch('/api/payment/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: numUserId,
+          client_name: chainHookClientName.trim(),
+          api_key: chainHookApiKey.trim(),
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setPaymentSaveSuccess(true);
+        setIsPaymentConfigured(true);
+        setTimeout(() => setPaymentSaveSuccess(false), 4000);
+      } else {
+        setPaymentSaveError(json.message || 'Failed to save payment settings');
+      }
+    } catch (err: any) {
+      setPaymentSaveError(err.message || 'Network error while saving settings');
+    } finally {
+      setIsSavingPayment(false);
+    }
+  };
   
   // Form State
   const [name, setName] = useState(currentUser.name);
@@ -176,7 +243,7 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
                   )}
                 </div>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  {currentUser.companyName || currentUser.name} · {currentUser.location}
+                  {currentUser.companyName || currentUser.name} ┬╖ {currentUser.location}
                 </p>
               </div>
             </div>
@@ -199,7 +266,7 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
               </div>
               <div className="w-px h-6 bg-white/10" />
               <div className="text-center">
-                <span className="font-black text-amber-400 text-base block">{currentUser.rating}★</span>
+                <span className="font-black text-amber-400 text-base block">{currentUser.rating}Γÿà</span>
                 <span className="text-slate-400 text-[10px]">Rating</span>
               </div>
             </div>
@@ -222,6 +289,7 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
           <div className="bg-white border border-slate-200/80 rounded-2xl p-2 shadow-xs space-y-1">
             {[
               { id: 'profile', label: 'Business Profile', icon: Building2 },
+              { id: 'payment_method', label: 'Payment Method (Chain Hook)', icon: CreditCard },
               { id: 'network', label: 'Network & Connections', icon: Network },
               { id: 'security', label: 'Security & Auth', icon: Lock },
               { id: 'privacy', label: 'Privacy & Permissions', icon: Eye },
@@ -306,6 +374,119 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
               </form>
             )}
 
+            {/* TAB: PAYMENT METHOD (CHAIN HOOK) */}
+            {activeSubTab === 'payment_method' && (
+              <div className="space-y-6 text-left">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">Seller Payment Method</h2>
+                    <p className="text-xs text-slate-500">Configure your direct merchant payment gateway to receive funds from sales.</p>
+                  </div>
+                  {isPaymentConfigured ? (
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Active & Connected
+                    </span>
+                  ) : (
+                    <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+                      <Key className="w-3.5 h-3.5 text-amber-600" /> Setup Required
+                    </span>
+                  )}
+                </div>
+
+                {/* Chain Hook Provider Card */}
+                <div className="p-5 rounded-2xl border-2 border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-white to-purple-50/40 shadow-xs space-y-5">
+                  <div className="flex items-center justify-between border-b border-indigo-100/80 pb-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-white border border-slate-200/80 shadow-xs p-1.5 flex items-center justify-center">
+                        <img
+                          src="https://res.cloudinary.com/ecxs6pgw/image/upload/v1783354359/logo_acvlmj.png"
+                          alt="Chain Hook Logo"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-black text-slate-900">Chain Hook</h3>
+                          <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Official Payout Gateway
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Direct merchant settlement & encrypted Web3 escrow transactions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSavePaymentSettings} className="space-y-4">
+                    {/* Input 1: Client Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        Client Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={chainHookClientName}
+                        onChange={(e) => setChainHookClientName(e.target.value)}
+                        placeholder="e.g. MyStoreClient"
+                        className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-medium text-slate-900 shadow-2xs"
+                        required
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Your registered Merchant / Client identifier in your Chain Hook account.
+                      </p>
+                    </div>
+
+                    {/* Input 2: API Key */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        API Key <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        value={chainHookApiKey}
+                        onChange={(e) => setChainHookApiKey(e.target.value)}
+                        placeholder="e.g. chk_live_xxxxxxxxxxxxxxxxxxxxxxxx"
+                        className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-mono text-slate-900 shadow-2xs"
+                        required
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Your secret Chain Hook API key used to authorize payments directly to your wallet.
+                      </p>
+                    </div>
+
+                    {/* Feedback Alerts */}
+                    {paymentSaveSuccess && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        Chain Hook payment method configured successfully! You can now create and sell products.
+                      </div>
+                    )}
+
+                    {paymentSaveError && (
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-semibold flex items-center gap-2">
+                        <Key className="w-4 h-4 text-rose-600 shrink-0" />
+                        {paymentSaveError}
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex items-center justify-between">
+                      <p className="text-[11px] text-slate-500">
+                        ΓÜí <strong>Required:</strong> Sellers must configure this before listing products.
+                      </p>
+                      <button
+                        type="submit"
+                        disabled={isSavingPayment}
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingPayment ? 'Saving...' : 'Save Payment Settings'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
             {/* TAB 2: NETWORK & CONNECTIONS */}
             {activeSubTab === 'network' && (
               <div className="space-y-5 text-left">
@@ -387,7 +568,7 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
                           onClick={() => setNetworkTab('followers')}
                           className="text-xs font-bold text-indigo-600 hover:underline"
                         >
-                          Browse Followers →
+                          Browse Followers ΓåÆ
                         </button>
                       </div>
                     ) : (
@@ -458,9 +639,9 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
                   <h3 className="text-xs font-bold text-slate-900 mb-2">Active Business Logins</h3>
                   <div className="p-3 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
                     <div>
-                      <span className="font-bold text-slate-900">Windows PC • Chrome Browser</span>
-                      <span className="text-[10px] text-emerald-600 font-bold ml-2">● Current Session</span>
-                      <p className="text-[10px] text-slate-400">IP: 192.168.1.42 • New York, USA</p>
+                      <span className="font-bold text-slate-900">Windows PC ΓÇó Chrome Browser</span>
+                      <span className="text-[10px] text-emerald-600 font-bold ml-2">ΓùÅ Current Session</span>
+                      <p className="text-[10px] text-slate-400">IP: 192.168.1.42 ΓÇó New York, USA</p>
                     </div>
                     <button className="text-[11px] font-bold text-slate-400 hover:text-slate-600">Active</button>
                   </div>
@@ -479,7 +660,7 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
                 <div className="space-y-4">
                   {[
                     { label: 'Public Business Listing', desc: 'Make your storefront visible in global search engines and public feeds.', state: publicProfile, set: setPublicProfile },
-                    { label: 'Show Sales & Trust Badge', desc: `Display verified sales count (${currentUser.totalSales}) and trust rating (${currentUser.rating}★).`, state: showSalesBadge, set: setShowSalesBadge },
+                    { label: 'Show Sales & Trust Badge', desc: `Display verified sales count (${currentUser.totalSales}) and trust rating (${currentUser.rating}Γÿà).`, state: showSalesBadge, set: setShowSalesBadge },
                     { label: 'Allow Direct Buy Desk RFQs', desc: 'Permit enterprise buyers to send bulk custom quotes directly to your inbox.', state: allowDirectRFQ, set: setAllowDirectRFQ },
                   ].map(({ label, desc, state, set }) => (
                     <div key={label} className="p-4 rounded-xl border border-slate-200 flex items-center justify-between">
@@ -548,8 +729,8 @@ export const SettingsPrivacyView: React.FC<SettingsPrivacyViewProps> = ({ curren
                   <div className="flex items-center gap-3">
                     <CreditCard className="w-6 h-6 text-slate-600" />
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900">Visa ending in •••• 4242</h4>
-                      <p className="text-[10px] text-slate-500">Expires 12/28 • Default Payment Method</p>
+                      <h4 className="text-xs font-bold text-slate-900">Visa ending in ΓÇóΓÇóΓÇóΓÇó 4242</h4>
+                      <p className="text-[10px] text-slate-500">Expires 12/28 ΓÇó Default Payment Method</p>
                     </div>
                   </div>
                   <button className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer">Edit Method</button>

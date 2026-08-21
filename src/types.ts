@@ -86,9 +86,10 @@ export interface Listing {
   description: string;
   category: MarketplaceCategory;
   storeCategory?: string;
-  condition: ProductCondition;
+  condition?: ProductCondition;
   price: number;
   originalPrice?: number;
+  discountPercent?: number; // Discount percentage between 1-99%
   variants?: ProductVariant[];
   features?: ProductFeature[];
   optionSections?: ProductOptionSection[]; // Custom multi-section modifier builder (e.g. Size, Crust, Add-ons)
@@ -247,7 +248,7 @@ export interface Conversation {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: 'like' | 'comment' | 'follow' | 'order' | 'offer_update' | 'price_drop';
+  type: 'like' | 'comment' | 'follow' | 'order' | 'offer_update' | 'price_drop' | 'system';
   title: string;
   body: string;
   isRead: boolean;

@@ -37,7 +37,7 @@ const mapRoleNameToUserRole = (roleName: string): UserRole => {
   return 'buyer_free';
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://bigbiz-backend.onrender.com';
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -79,7 +79,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           const roleName = userPayload.role_name || 'buyer_free';
           const resolvedRole = mapRoleNameToUserRole(roleName);
           const loggedInUser: User = {
-            id: `user-${userPayload.id || Date.now()}`,
+            // FIX: use the real numeric ID from the backend as-is (stringified).
+            // Previously this was `user-${userPayload.id || Date.now()}`, which
+            // fabricated an ID that never matched the raw ID returned by
+            // /api/users, breaking every network/status/message lookup that
+            // compared currentUser.id against another user's id.
+            id: String(userPayload.id),
             name: userPayload.full_name || email.split('@')[0],
             username: `@${(userPayload.full_name || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '')}`,
             email: userPayload.email,
@@ -139,7 +144,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           const resolvedRole = mapRoleNameToUserRole(roleName);
 
           const newUser: User = {
-            id: `user-${userPayload.id || Date.now()}`,
+            // FIX: same as above — use the real numeric ID from the backend.
+            id: String(userPayload.id),
             name: userPayload.full_name,
             username: `@${userPayload.full_name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
             email: userPayload.email,
@@ -159,9 +165,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             createdAt: 'Just now'
           };
 
-          const token = `token_${Date.now()}`;
-          localStorage.setItem('auth_token', token);
-          document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+          // Get a real JWT by logging in with the freshly created credentials —
+          // a fabricated token here would fail /api/users/me on reload
+          let token: string | undefined;
+          try {
+            const loginRes = await fetch(`${API_BASE}/api/users/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password }),
+            });
+            if (loginRes.ok) {
+              const loginData = await loginRes.json();
+              token = loginData.data?.token;
+            }
+          } catch {}
+
+          if (token) {
+            localStorage.setItem('auth_token', token);
+            document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+          }
           localStorage.setItem('auth_user', JSON.stringify(newUser));
 
           setSuccessMessage('Account registered successfully! Accessing workspace...');
@@ -175,11 +197,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         return;
       }
     } catch {
-      // Fallback for offline demonstration
+      // Fallback for offline demonstration (backend unreachable / network error).
+      // NOTE: this path has no real backend user to reference, so a synthetic
+      // `user-${Date.now()}` id is intentionally kept here for existing demo
+      // accounts. Any real backend call made while in this state (network
+      // requests, chat, etc.) will not resolve against real data, since
+      // there's no matching row in Postgres. This is expected for a pure
+      // offline/demo fallback.
       const existing = INITIAL_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (existing) {
         localStorage.setItem('auth_token', `demo_token_${existing.id}`);
-        document.cookie = `auth_token=demo_token_${existing.id}; path=/; max-age=86400; SameSite=Lax`;
         localStorage.setItem('auth_user', JSON.stringify(existing));
         onLogin(existing);
       } else {
@@ -206,7 +233,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         };
         const token = `demo_token_${fallbackUser.id}`;
         localStorage.setItem('auth_token', token);
-        document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`;
         localStorage.setItem('auth_user', JSON.stringify(fallbackUser));
         onLogin(fallbackUser, token);
       }
@@ -433,60 +459,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     </div>
                   </div>
 
-                  {/* Account Role Selector */}
+                  {/* Account Role Selector (Free Buyer or Free Seller only) */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Account Role & Tier</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-semibold text-slate-300">Account Role</label>
+                      <span className="text-[10px] text-amber-400 font-medium">⚡ Upgrade to PRO inside app anytime</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
                       <button
                         type="button"
                         onClick={() => setRoleType('buyer_free')}
-                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
+                        className={`py-3 px-3 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
                           roleType === 'buyer_free'
-                            ? 'bg-indigo-600/30 border-indigo-500 text-white shadow-xs font-bold'
+                            ? 'bg-indigo-600/30 border-indigo-500 text-white shadow-xs font-bold ring-1 ring-indigo-500/50'
                             : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
                         }`}
                       >
-                        <span>Free Buyer</span>
-                        <span className="text-[10px] opacity-70 font-normal">Standard customer tier</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setRoleType('buyer_premium')}
-                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
-                          roleType === 'buyer_premium'
-                            ? 'bg-emerald-600/30 border-emerald-500 text-emerald-200 shadow-xs font-bold'
-                            : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <span className="flex items-center gap-1">VIP Buyer ⭐</span>
-                        <span className="text-[10px] opacity-70 font-normal">Priority escrow & bulk RFQs</span>
+                        <span className="font-extrabold text-sm">🛒 Buyer</span>
+                        <span className="text-[10px] opacity-70 font-normal mt-0.5">Purchase products, rent & request quotes</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setRoleType('seller_free')}
-                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
+                        className={`py-3 px-3 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
                           roleType === 'seller_free'
-                            ? 'bg-teal-600/30 border-teal-500 text-teal-200 shadow-xs font-bold'
+                            ? 'bg-teal-600/30 border-teal-500 text-teal-200 shadow-xs font-bold ring-1 ring-teal-500/50'
                             : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
                         }`}
                       >
-                        <span>Free Seller</span>
-                        <span className="text-[10px] opacity-70 font-normal">Basic marketplace vendor</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setRoleType('seller_premium')}
-                        className={`py-2 px-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col ${
-                          roleType === 'seller_premium'
-                            ? 'bg-amber-600/30 border-amber-500 text-amber-200 shadow-xs font-bold'
-                            : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <span className="flex items-center gap-1">PRO Seller ⚡</span>
-                        <span className="text-[10px] opacity-70 font-normal">SaaS licenses & custom store</span>
+                        <span className="font-extrabold text-sm">🏪 Seller / Merchant</span>
+                        <span className="text-[10px] opacity-70 font-normal mt-0.5">List products, manage store & sell</span>
                       </button>
                     </div>
                   </div>

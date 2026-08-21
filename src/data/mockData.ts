@@ -137,145 +137,9 @@ export const INITIAL_USERS: User[] = [
   }
 ];
 
-export const INITIAL_LISTINGS: Listing[] = [
-  {
-    id: 'lst_pizza_01',
-    title: 'Artisanal Wood-Fired Sourdough Pizza (Custom Made)',
-    description: 'Slow-fermented 72-hour organic sourdough crust baked in a 900°F Italian oak-fired brick oven. Customize your size, crust style, gourmet sauces, and premium extra toppings.',
-    category: 'new_products',
-    storeCategory: 'Artisanal Bakery & Pizzeria',
-    condition: 'new',
-    price: 18.00,
-    originalPrice: 22.00,
-    optionSections: [
-      {
-        id: 'sec_size',
-        title: 'Select Pizza Size',
-        type: 'single',
-        isRequired: true,
-        items: [
-          { id: 'opt_sz_10', name: '10" Personal Crust (6 Slices)', priceDelta: 0, isDefault: true },
-          { id: 'opt_sz_14', name: '14" Medium Crust (8 Slices)', priceDelta: 6.00 },
-          { id: 'opt_sz_18', name: '18" Party Size Jumbo (12 Slices)', priceDelta: 12.00 }
-        ]
-      },
-      {
-        id: 'sec_crust',
-        title: 'Crust Style & Seasoning',
-        type: 'single',
-        isRequired: true,
-        items: [
-          { id: 'opt_cr_nap', name: 'Classic Neapolitan (Soft & Airy)', priceDelta: 0, isDefault: true },
-          { id: 'opt_cr_garlic', name: 'Garlic Butter Herb Glazed Crust', priceDelta: 1.50 },
-          { id: 'opt_cr_cheese', name: 'Mozzarella Stuffed Crust Ring', priceDelta: 3.50 }
-        ]
-      },
-      {
-        id: 'sec_toppings',
-        title: 'Gourmet Extra Toppings',
-        type: 'multiple',
-        isRequired: false,
-        items: [
-          { id: 'opt_top_burrata', name: 'Fresh Creamy Burrata Cheese Ball', priceDelta: 4.50 },
-          { id: 'opt_top_truffle', name: 'Black Summer Truffle Oil Drizzle', priceDelta: 3.00 },
-          { id: 'opt_top_basil', name: 'Organic Fresh Genovese Basil Leaves', priceDelta: 1.00 },
-          { id: 'opt_top_parm', name: 'Aged 24-Month Parmigiano-Reggiano', priceDelta: 2.50 }
-        ]
-      }
-    ],
-    variants: [
-      { id: 'var_piz_dine', name: 'Dine-In Hot & Fresh', priceDelta: 0, inStock: true, isDefault: true },
-      { id: 'var_piz_take', name: 'Takeaway Insulated Box', priceDelta: 1.00, inStock: true },
-      { id: 'var_piz_frozen', name: 'Flash-Frozen Bake-at-Home Pack', priceDelta: -2.00, inStock: true }
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&auto=format&fit=crop&q=80'
-    ],
-    sellerId: 'usr_seller_free',
-    sellerName: 'Craft & Clay Pottery',
-    sellerAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    isFeatured: true,
-    likesCount: 84,
-    viewsCount: 650,
-    location: 'Austin, TX',
-    stockQty: 25,
-    status: 'active',
-    tags: ['#pizza', '#sourdough', '#artisanal', '#foodie', '#craftfood'],
-    createdAt: '2 hours ago'
-  },
-  {
-    id: 'lst_wood_01',
-    title: 'Solid Walnut Executive Standing Desk (Motorized)',
-    description: '100% sustainably harvested American black walnut desktop with dual-motor quiet lift mechanism, programmable height presets, and integrated wire management.',
-    category: 'new_products',
-    storeCategory: 'Ergonomic Desk Gear',
-    condition: 'new',
-    price: 899.00,
-    originalPrice: 1150.00,
-    variants: [
-      { id: 'var_60', name: '60" x 30" Standard Desktop', priceDelta: 0, inStock: true, isDefault: true },
-      { id: 'var_72', name: '72" x 36" Executive Studio Size', priceDelta: 250.00, inStock: true }
-    ],
-    features: [
-      { id: 'feat_power', name: 'Flush-Mount USB-C + AC Power Hub', price: 49.00, description: 'Dual 65W PD ports + 2 surge outlets' },
-      { id: 'feat_caster', name: 'Heavy-Duty Locking Polyurethane Casters', price: 29.00, description: 'Smooth 360° floor-safe wheels' }
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&auto=format&fit=crop&q=80'
-    ],
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    isFeatured: true,
-    likesCount: 142,
-    viewsCount: 1280,
-    location: 'Seattle, WA',
-    stockQty: 8,
-    status: 'active',
-    tags: ['#woodworking', '#standingdesk', '#workfromhome', '#walnut'],
-    createdAt: '1 day ago'
-  }
-];
+export const INITIAL_LISTINGS: Listing[] = [];
 
-export const INITIAL_POSTS: Post[] = [
-  {
-    id: 'post_1',
-    sellerId: 'usr_seller_premium',
-    sellerName: 'Nordic Timber & Tech',
-    sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerifiedSeller: true,
-    content: 'Just finished unboxing a fresh batch of kiln-dried American Walnut slabs! Check out the grain pattern on this 72" executive standing desk. Available now with Escrow purchase protection.',
-    mediaUrls: [
-      'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=800&auto=format&fit=crop&q=80'
-    ],
-    postType: 'product',
-    listingId: 'lst_wood_01',
-    listingTitle: 'Solid Walnut Executive Standing Desk',
-    listingPrice: 899.00,
-    likesCount: 148,
-    isLiked: false,
-    commentsCount: 22,
-    comments: [
-      {
-        id: 'c1',
-        postId: 'post_1',
-        userId: 'usr_buyer_1',
-        userName: 'Elena Rostova',
-        userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        text: 'The walnut finish looks stunning! What is the lead time for shipping to Oregon?',
-        createdAt: '1 hour ago'
-      }
-    ],
-    sharesCount: 15,
-    hashtags: ['#woodworking', '#standingdesk', '#artisancraft', '#BizSocial'],
-    createdAt: '3 hours ago'
-  }
-];
+export const INITIAL_POSTS: Post[] = [];
 
 export const INITIAL_STORIES: Story[] = [
   {
@@ -353,7 +217,7 @@ export const INITIAL_CONVERSATIONS: Conversation[] = [
     },
     lastMessage: 'Your custom walnut desk order has been confirmed with Escrow deposit protection!',
     lastMessageTime: '10:45 AM',
-    unreadCount: 1
+    unreadCount: 0
   }
 ];
 
@@ -382,7 +246,7 @@ export const INITIAL_MESSAGES: Message[] = [
     senderId: 'usr_seller_premium',
     senderName: 'Nordic Timber & Tech',
     text: 'Your custom walnut desk order has been confirmed with Escrow deposit protection!',
-    isRead: false,
+    isRead: true,
     createdAt: '10:45 AM'
   }
 ];

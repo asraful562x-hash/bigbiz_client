@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { User, DirectOffer, Listing } from '../types';
+import { useTopMerchants } from '../hooks/useTopMerchants';
+import { MerchantNetworkButton } from './MerchantNetworkButton';
 import { 
   Building2, 
   Handshake, 
@@ -24,7 +26,13 @@ import {
 } from 'lucide-react';
 
 interface RightBusinessSidebarProps {
-  users: User[];
+  /**
+   * @deprecated No longer used — RightBusinessSidebar now fetches its own
+   * merchant list via useTopMerchants. Kept optional so any parent still
+   * passing this prop doesn't break the build; safe to remove once callers
+   * are updated.
+   */
+  users?: User[];
   offers: DirectOffer[];
   listings: Listing[];
   activeTab: string;
@@ -34,10 +42,11 @@ interface RightBusinessSidebarProps {
   onOpenSellToUs: () => void;
   onOpenChat: (userId: string) => void;
   isInDrawer?: boolean;
+  isLoading?: boolean;
 }
 
 export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
-  users,
+  users: _unusedUsersProp,
   offers,
   listings,
   activeTab,
@@ -46,22 +55,19 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
   onOpenListingDetail,
   onOpenSellToUs,
   onOpenChat,
-  isInDrawer = false
+  isInDrawer = false,
+  isLoading = false
 }) => {
-  const [followedUserIds, setFollowedUserIds] = useState<string[]>([]);
-
-  const toggleFollow = (id: string) => {
-    setFollowedUserIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
-
   const role = currentUser.role;
   const isBuyer = role === 'buyer_free' || role === 'buyer_premium' || role === 'buyer';
   const isSeller = role === 'seller_free' || role === 'seller_premium';
   const isVipBuyer = role === 'buyer_premium';
 
-  const featuredMerchants = users.filter(u => u.isVerified || u.role.includes('seller')).slice(0, 3);
+  // Fetches GET /api/users, filters to sellers, excludes currentUser, caps at 3.
+  // See hooks/useTopMerchants.ts — this replaces the old `users` prop, so
+  // this component no longer depends on a parent to fetch/pass merchants in.
+  const { merchants: featuredMerchants, isLoading: isLoadingMerchants } = useTopMerchants(currentUser.id);
+
   const trendingListings = listings.slice(0, 3);
 
   // Live activity stream mock items
@@ -152,37 +158,53 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
             </span>
           </div>
 
-          <div className="space-y-2.5">
-            {offers.slice(0, 2).map((off) => (
-              <div 
-                key={off.id}
-                className={`p-3 bg-slate-50 hover:bg-slate-100/80 ${inner} border border-slate-100 transition-colors space-y-2`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
-                    {off.category.replace('_', ' ')}
-                  </span>
-                  <span className="font-extrabold text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
-                    Target: ${off.expectedPrice.toLocaleString()}
-                  </span>
-                </div>
-
-                <h5 className="font-bold text-xs text-slate-900 leading-snug line-clamp-2">
-                  {off.title}
-                </h5>
-
-                <div className="flex items-center justify-between text-[11px] pt-1">
-                  <span className="text-slate-400 font-medium truncate">{off.sellerName}</span>
-                  <button
-                    onClick={onOpenSellToUs}
-                    className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 hover:underline shrink-0"
-                  >
-                    Submit Quote <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
+          {isLoading ? (
+            <div className="space-y-2 py-1">
+              <div className="flex items-center gap-2 px-1 text-slate-500 text-xs">
+                <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                <span className="font-semibold text-[11px] text-slate-600">Please wait, loading active RFQs…</span>
               </div>
-            ))}
-          </div>
+              {[0, 1].map((i) => (
+                <div key={i} className={`p-3 bg-slate-50 ${inner} border border-slate-100 space-y-2 animate-pulse`}>
+                  <div className="h-3 bg-slate-200 rounded w-1/3" />
+                  <div className="h-2.5 bg-slate-200 rounded w-4/5" />
+                  <div className="h-2 bg-slate-100 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {offers.slice(0, 2).map((off) => (
+                <div 
+                  key={off.id}
+                  className={`p-3 bg-slate-50 hover:bg-slate-100/80 ${inner} border border-slate-100 transition-colors space-y-2`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
+                      {off.category.replace('_', ' ')}
+                    </span>
+                    <span className="font-extrabold text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                      Target: ${off.expectedPrice.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <h5 className="font-bold text-xs text-slate-900 leading-snug line-clamp-2">
+                    {off.title}
+                  </h5>
+
+                  <div className="flex items-center justify-between text-[11px] pt-1">
+                    <span className="text-slate-400 font-medium truncate">{off.sellerName}</span>
+                    <button
+                      onClick={onOpenSellToUs}
+                      className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 hover:underline shrink-0"
+                    >
+                      Submit Quote <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <button
             onClick={onOpenSellToUs}
@@ -204,37 +226,56 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
           </span>
         </div>
 
-        <div className="space-y-3">
-          {trendingListings.map((item) => (
-            <div 
-              key={item.id}
-              onClick={() => onOpenListingDetail(item)}
-              className={`group cursor-pointer flex items-center gap-3 p-2 ${inner} hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100`}
-            >
-              <img 
-                src={item.images[0] || 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&q=80&w=400'} 
-                alt={item.title} 
-                className={`w-14 h-14 ${innerSm} object-cover border border-slate-200 shrink-0 group-hover:scale-105 transition-transform`} 
-              />
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] font-extrabold bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded uppercase">
-                    {item.category === 'wholesale_b2b' ? 'B2B Wholesale' : item.condition}
-                  </span>
-                </div>
-                <h5 className="font-bold text-xs text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                  {item.title}
-                </h5>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-slate-900">${item.price.toLocaleString()}</span>
-                  <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
-                    <ShieldCheck className="w-3 h-3" /> Protected
-                  </span>
+        {isLoading ? (
+          <div className="space-y-2.5 py-1">
+            <div className="flex items-center gap-2 px-1 text-slate-500 text-xs">
+              <div className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0" />
+              <span className="font-semibold text-[11px] text-slate-600">Please wait, loading trending deals…</span>
+            </div>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={`flex items-center gap-3 p-2 ${inner} animate-pulse bg-slate-50/70`}>
+                <div className={`w-14 h-14 ${innerSm} bg-slate-200 shrink-0`} />
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <div className="h-2 bg-slate-200 rounded w-1/3" />
+                  <div className="h-2.5 bg-slate-200 rounded w-3/4" />
+                  <div className="h-2 bg-slate-100 rounded w-1/4" />
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {trendingListings.map((item) => (
+              <div 
+                key={item.id}
+                onClick={() => onOpenListingDetail(item)}
+                className={`group cursor-pointer flex items-center gap-3 p-2 ${inner} hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100`}
+              >
+                <img 
+                  src={item.images[0] || 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&q=80&w=400'} 
+                  alt={item.title} 
+                  className={`w-14 h-14 ${innerSm} object-cover border border-slate-200 shrink-0 group-hover:scale-105 transition-transform`} 
+                />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-extrabold bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded uppercase">
+                      {item.category === 'wholesale_b2b' ? 'B2B Wholesale' : item.condition}
+                    </span>
+                  </div>
+                  <h5 className="font-bold text-xs text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                    {item.title}
+                  </h5>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-extrabold text-slate-900">${item.price.toLocaleString()}</span>
+                    <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
+                      <ShieldCheck className="w-3 h-3" /> Protected
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 3. VERIFIED BUSINESS SPOTLIGHT & NETWORK */}
@@ -248,10 +289,25 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
           </span>
         </div>
 
-        <div className="space-y-3">
-          {featuredMerchants.map((merchant) => {
-            const isFollowing = followedUserIds.includes(merchant.id);
-            return (
+        {isLoadingMerchants ? (
+          <div className="space-y-3 py-1">
+            <div className="flex items-center gap-2 px-1 text-slate-500 text-xs">
+              <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0" />
+              <span className="font-semibold text-[11px] text-slate-600">Please wait, loading merchants…</span>
+            </div>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-2.5 p-2 animate-pulse bg-slate-50/70 rounded-xl">
+                <div className="w-9 h-9 rounded-full bg-slate-200 shrink-0" />
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <div className="h-2.5 bg-slate-200 rounded w-2/3" />
+                  <div className="h-2 bg-slate-100 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : featuredMerchants.length > 0 ? (
+          <div className="space-y-3">
+            {featuredMerchants.map((merchant) => (
               <div key={merchant.id} className={`flex items-center justify-between gap-2 p-2 ${inner} hover:bg-slate-50 transition-colors`}>
                 <div className="flex items-center gap-2.5 min-w-0">
                   <img
@@ -284,29 +340,28 @@ export const RightBusinessSidebar: React.FC<RightBusinessSidebarProps> = ({
                   >
                     <MessageSquare className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => toggleFollow(merchant.id)}
-                    className={`px-2.5 py-1 ${innerSm} text-xs font-bold transition-all flex items-center gap-1 ${
-                      isFollowing 
-                        ? 'bg-slate-100 text-slate-700 border border-slate-200' 
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                    }`}
-                  >
-                    {isFollowing ? (
-                      <>
-                        <UserCheck className="w-3 h-3" /> Following
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-3 h-3" /> Network
-                      </>
-                    )}
-                  </button>
+
+                  <MerchantNetworkButton
+                    currentUserId={currentUser.id}
+                    merchantId={merchant.id}
+                    innerSm={innerSm}
+                  />
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          /* Empty state — no verified merchants other than the current user yet */
+          <div className="flex flex-col items-center justify-center text-center py-8 px-3 gap-2">
+            <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-slate-300" />
+            </div>
+            <p className="text-xs font-bold text-slate-600">No merchants to show yet</p>
+            <p className="text-[10px] text-slate-400 max-w-[200px]">
+              Verified sellers will show up here as they join the platform.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 4. REAL-TIME ESCROW TRANSACTION TICKER */}

@@ -7,6 +7,10 @@ coverage/
 .env*
 !.env.example
 
+# Next.js build output & dev cache — never commit these
+.next/
+out/
+
 server
 server/
 /server/

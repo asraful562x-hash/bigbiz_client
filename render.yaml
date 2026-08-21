@@ -1,0 +1,36 @@
+﻿# Render Deployment Blueprint
+services:
+  - type: web
+    name: bigbiz-backend
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: free
+    region: singapore
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: PASSWORD_PEPPER
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRY_HOURS
+        value: "24"
+      - key: REDIS_URL_1
+        sync: false
+      - key: REDIS_URL_2
+        sync: false
+      - key: FRONTEND_URL
+        value: "http://localhost:3000"
+      - key: PAYMENT_CALLBACK_URL
+        value: "http://localhost:8080/api/callback"
+      - key: DEFAULT_PAYMENT_CLIENT_NAME
+        value: "MegaShop321go"
+      - key: DEFAULT_PAYMENT_API_KEY
+        value: "kAcggOaH0GuFBZtjvlGef4j5v6njgufsUnq2xx0B6SM"
+      - key: DEFAULT_PAYMENT_BASE_URL
+        value: "http://localhost:3000"

@@ -38,7 +38,7 @@ interface DirectMessagesViewProps {
   onOpenSellerProfile?: (id: string) => void;
 }
 
-// ─── BizBot Knowledge Base ───────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ BizBot Knowledge Base ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 interface BotRule {
   keywords: string[];
   response: string;
@@ -48,32 +48,32 @@ interface BotRule {
 const BOT_RULES: BotRule[] = [
   {
     keywords: ['login', 'sign in', 'cant login', "can't login", 'password', 'forgot', 'access', 'log in'],
-    response: "**Login issues?** Here's how to fix them:\n\n1. Make sure you're using the email registered with BizSocial.\n2. Try resetting your password via the **Forgot Password** link on the login page.\n3. If you use Google or Facebook login, click the OAuth button instead of the email form.\n4. Clear your browser cache and try again.\n\nStill stuck? Our support desk can assist you at support@bizsocial.com 🙌",
+    response: "**Login issues?** Here's how to fix them:\n\n1. Make sure you're using the email registered with BizSocial.\n2. Try resetting your password via the **Forgot Password** link on the login page.\n3. If you use Google or Facebook login, click the OAuth button instead of the email form.\n4. Clear your browser cache and try again.\n\nStill stuck? Our support desk can assist you at support@bizsocial.com ≡ƒÖî",
     followUps: ['How do I reset my password?', 'I want to change my email', 'My account is locked'],
   },
   {
     keywords: ['create listing', 'add product', 'sell', 'post listing', 'new listing', 'upload product'],
-    response: "**To create a listing:**\n\n1. Click the **＋ button** in the top navigation bar.\n2. Select **Create Listing**.\n3. Fill in the product name, category, price, and images.\n4. Choose between *Fixed Price* or *Negotiable*.\n5. Hit **Publish** — your listing goes live instantly!\n\n💡 *Tip: Premium sellers get priority placement in search results.*",
+    response: "**To create a listing:**\n\n1. Click the **∩╝ï button** in the top navigation bar.\n2. Select **Create Listing**.\n3. Fill in the product name, category, price, and images.\n4. Choose between *Fixed Price* or *Negotiable*.\n5. Hit **Publish** ΓÇö your listing goes live instantly!\n\n≡ƒÆí *Tip: Premium sellers get priority placement in search results.*",
     followUps: ['What categories can I list in?', 'How do I add images?', 'Can I edit a listing after publishing?'],
   },
   {
     keywords: ['order', 'orders', 'escrow', 'purchase', 'buy', 'checkout', 'payment held', 'transaction'],
-    response: "**About Orders & Escrow:**\n\nBizSocial uses a **secure escrow system** to protect both buyers and sellers:\n\n• Payment is held safely until you confirm delivery.\n• You can track order status under **Orders & Escrow** tab.\n• To dispute an order, click **Raise Dispute** on the order card.\n• Funds are released within 24 hours of confirmed delivery.\n\n🔒 All transactions are encrypted and secured.",
+    response: "**About Orders & Escrow:**\n\nBizSocial uses a **secure escrow system** to protect both buyers and sellers:\n\nΓÇó Payment is held safely until you confirm delivery.\nΓÇó You can track order status under **Orders & Escrow** tab.\nΓÇó To dispute an order, click **Raise Dispute** on the order card.\nΓÇó Funds are released within 24 hours of confirmed delivery.\n\n≡ƒöÆ All transactions are encrypted and secured.",
     followUps: ['How do I confirm delivery?', 'What if my order is delayed?', 'How do I raise a dispute?'],
   },
   {
     keywords: ['verify', 'verification', 'badge', 'b2b verified', 'verified seller', 'trust'],
-    response: "**Verification & Trust Badges:**\n\nTo get your **B2B Verified** badge:\n\n1. Go to **Settings → Security**.\n2. Submit your business registration documents.\n3. Our team reviews within **2-3 business days**.\n4. Once approved, your profile shows a ✅ verified badge.\n\nVerified sellers get higher search rankings and more buyer trust!",
+    response: "**Verification & Trust Badges:**\n\nTo get your **B2B Verified** badge:\n\n1. Go to **Settings ΓåÆ Security**.\n2. Submit your business registration documents.\n3. Our team reviews within **2-3 business days**.\n4. Once approved, your profile shows a Γ£à verified badge.\n\nVerified sellers get higher search rankings and more buyer trust!",
     followUps: ['What documents do I need?', 'How long does verification take?', 'Can I appeal a rejected verification?'],
   },
   {
     keywords: ['payment', 'pay', 'invoice', 'refund', 'billing', 'charge', 'fee'],
-    response: "**Payment & Billing Information:**\n\n• BizSocial takes a **3% transaction fee** on completed sales.\n• Sellers receive payouts within **24–48 hours** of delivery confirmation.\n• Refunds are processed within **5–7 business days**.\n• Supported payment methods: Cards, Bank Transfer, Mobile Banking.\n\nFor billing issues, visit **Settings → Billing** or contact support.",
+    response: "**Payment & Billing Information:**\n\nΓÇó BizSocial takes a **3% transaction fee** on completed sales.\nΓÇó Sellers receive payouts within **24ΓÇô48 hours** of delivery confirmation.\nΓÇó Refunds are processed within **5ΓÇô7 business days**.\nΓÇó Supported payment methods: Cards, Bank Transfer, Mobile Banking.\n\nFor billing issues, visit **Settings ΓåÆ Billing** or contact support.",
     followUps: ['How do I add a payment method?', 'When will I receive my payout?', 'How do I request a refund?'],
   },
   {
     keywords: ['premium', 'upgrade', 'pro', 'subscription', 'plan', 'tier'],
-    response: "**BizSocial Premium Plans:**\n\n| Plan | Price | Features |\n|------|-------|----------|\n| Free | $0/mo | 5 listings, basic analytics |\n| Pro | $29/mo | Unlimited listings, priority support |\n| Enterprise | Custom | Custom branding, API access |\n\nTo upgrade, go to **Settings → Billing** or click **Upgrade** in the left sidebar.\n\n🎁 First month free for new Premium subscribers!",
+    response: "**BizSocial Premium Plans:**\n\n| Plan | Price | Features |\n|------|-------|----------|\n| Free | $0/mo | 5 listings, basic analytics |\n| Pro | $29/mo | Unlimited listings, priority support |\n| Enterprise | Custom | Custom branding, API access |\n\nTo upgrade, go to **Settings ΓåÆ Billing** or click **Upgrade** in the left sidebar.\n\n≡ƒÄü First month free for new Premium subscribers!",
     followUps: ['What are the Pro plan benefits?', 'Can I cancel anytime?', 'Do you offer annual discounts?'],
   },
   {
@@ -83,12 +83,12 @@ const BOT_RULES: BotRule[] = [
   },
   {
     keywords: ['contact', 'human', 'agent', 'support team', 'email support', 'talk to someone', 'real person'],
-    response: "**Reach Our Support Team:**\n\n📧 **Email:** support@bizsocial.com\n📞 **Phone:** +1 (800) 249-7662 *(Mon–Fri, 9am–6pm UTC)*\n💬 **Live Chat:** Available for Premium users in Settings → Help.\n\nAverage response time: **< 2 hours** for email, **instant** for live chat (Pro+).\n\nYou can also visit our full **Help Center** in the **Help** tab!",
+    response: "**Reach Our Support Team:**\n\n≡ƒôº **Email:** support@bizsocial.com\n≡ƒô₧ **Phone:** +1 (800) 249-7662 *(MonΓÇôFri, 9amΓÇô6pm UTC)*\n≡ƒÆ¼ **Live Chat:** Available for Premium users in Settings ΓåÆ Help.\n\nAverage response time: **< 2 hours** for email, **instant** for live chat (Pro+).\n\nYou can also visit our full **Help Center** in the **Help** tab!",
     followUps: ['Open a support ticket', 'Check my ticket status', 'Visit the Help Center'],
   },
   {
     keywords: ['hello', 'hi', 'hey', 'help', 'start', 'helo', 'hii'],
-    response: "👋 **Hey there! I'm BizBot AI**, your 24/7 assistant.\n\nI can help you with:\n• Account & login issues\n• Creating listings\n• Orders & escrow\n• Payments & billing\n• Verification\n• Premium plans\n\nJust type your question or pick a topic below!",
+    response: "≡ƒæï **Hey there! I'm BizBot AI**, your 24/7 assistant.\n\nI can help you with:\nΓÇó Account & login issues\nΓÇó Creating listings\nΓÇó Orders & escrow\nΓÇó Payments & billing\nΓÇó Verification\nΓÇó Premium plans\n\nJust type your question or pick a topic below!",
     followUps: ['Login & Account', 'Orders & Escrow', 'Create a Listing', 'Payments & Billing', 'Contact Support'],
   },
 ];
@@ -127,8 +127,8 @@ function renderMarkdown(text: string) {
       );
     }
 
-    if (line.startsWith('• ') || line.startsWith('* ')) {
-      return <div key={i} className="flex items-start gap-1.5 pl-1"><span className="text-indigo-400 mt-0.5 shrink-0">•</span><span>{parts}</span></div>;
+    if (line.startsWith('ΓÇó ') || line.startsWith('* ')) {
+      return <div key={i} className="flex items-start gap-1.5 pl-1"><span className="text-indigo-400 mt-0.5 shrink-0">ΓÇó</span><span>{parts}</span></div>;
     }
 
     if (/^\d+\./.test(line)) {
@@ -167,7 +167,7 @@ const QUICK_TOPICS = [
 const INITIAL_BOT_MESSAGE: BotChatMessage = {
   id: 'welcome',
   role: 'bot',
-  text: "👋 **Welcome to BizBot AI Support!**\n\nI can help you instantly with account issues, listings, escrow orders, payments, and platform rules.\n\nAsk me anything or choose a quick topic below!",
+  text: "≡ƒæï **Welcome to BizBot AI Support!**\n\nI can help you instantly with account issues, listings, escrow orders, payments, and platform rules.\n\nAsk me anything or choose a quick topic below!",
   time: 'Just now',
   followUps: QUICK_TOPICS.map(t => t.label),
 };
@@ -177,13 +177,13 @@ const CONVERSATION_PRODUCTS: Record<string, { title: string; price: number; imag
     title: 'Walnut Wood MagSafe Floating Desk Stand',
     price: 89.00,
     image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=200&auto=format&fit=crop&q=80',
-    tag: 'Order #1002 • Escrow Secured'
+    tag: 'Order #1002 ΓÇó Escrow Secured'
   },
   'conv_2': {
     title: 'Handmade Stoneware Ceramic Coffee Mug',
     price: 34.00,
     image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200&auto=format&fit=crop&q=80',
-    tag: 'Inquiry • In Stock'
+    tag: 'Inquiry ΓÇó In Stock'
   }
 };
 
@@ -217,8 +217,8 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'chat'>(initialSellerId ? 'chat' : 'list');
   const [reactions, setReactions] = useState<Record<string, string[]>>({
-    'm1': ['❤️', '👍'],
-    'm2': ['🔥']
+    'm1': ['Γ¥ñ∩╕Å', '≡ƒæì'],
+    'm2': ['≡ƒöÑ']
   });
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -244,6 +244,22 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
     conv.otherParticipant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  useEffect(() => {
+    if (initialSellerId && conversations.length > 0) {
+      const match = conversations.find(c =>
+        c.id === initialSellerId ||
+        c.otherParticipant.id === initialSellerId ||
+        String(c.otherParticipant.id).replace(/\D/g, '') === String(initialSellerId).replace(/\D/g, '')
+      );
+      if (match) {
+        setActiveConvId(match.id);
+        setMobileView('chat');
+      }
+    } else if (conversations.length > 0 && (!activeConvId || !conversations.some(c => c.id === activeConvId))) {
+      setActiveConvId(conversations[0].id);
+    }
+  }, [initialSellerId, conversations]);
 
   useEffect(() => {
     if (activeViewTab === 'direct') {
@@ -325,7 +341,7 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
 
   const handleSendOffer = () => {
     if (!offerAmount || isNaN(Number(offerAmount))) return;
-    handleSend(`🏷️ B2B OFFER PROPOSAL: $${Number(offerAmount).toFixed(2)} for "${activeProduct.title}"`);
+    handleSend(`≡ƒÅ╖∩╕Å B2B OFFER PROPOSAL: $${Number(offerAmount).toFixed(2)} for "${activeProduct.title}"`);
     setShowOfferModal(false);
     setOfferAmount('');
   };
@@ -333,7 +349,7 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
   return (
     <div className="h-[calc(100vh-140px)] min-h-[560px] bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col relative">
       
-      {/* ── Top Header Navigation Tabs: Direct Messages vs BizBot AI ── */}
+      {/* ΓöÇΓöÇ Top Header Navigation Tabs: Direct Messages vs BizBot AI ΓöÇΓöÇ */}
       <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0">
         <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/10 shadow-inner backdrop-blur-md">
           <button
@@ -385,7 +401,7 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
         </div>
       </div>
 
-      {/* ── VIEW 1: Direct User Messaging Template ── */}
+      {/* ΓöÇΓöÇ VIEW 1: Direct User Messaging Template ΓöÇΓöÇ */}
       {activeViewTab === 'direct' && (
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
           {/* LEFT COLUMN: Conversations Directory */}
@@ -507,7 +523,7 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
                       </div>
                       <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        Online • Verified B2B Merchant
+                        Online ΓÇó Verified B2B Merchant
                       </span>
                     </div>
                   </div>
@@ -594,11 +610,11 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
                       {/* Hover action toolbar */}
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mb-2">
                         <button
-                          onClick={() => handleToggleReaction(msg.id, '👍')}
+                          onClick={() => handleToggleReaction(msg.id, '≡ƒæì')}
                           className="p-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 text-[10px] shadow-2xs"
                           title="Thumbs up"
                         >
-                          👍
+                          ≡ƒæì
                         </button>
                         <button
                           onClick={() => handleCopyMessage(msg.id, msg.text)}
@@ -672,7 +688,7 @@ export const DirectMessagesView: React.FC<DirectMessagesViewProps> = ({
         </div>
       )}
 
-      {/* ── VIEW 2: BizBot AI Assistant Integrated Tab ── */}
+      {/* ΓöÇΓöÇ VIEW 2: BizBot AI Assistant Integrated Tab ΓöÇΓöÇ */}
       {activeViewTab === 'ai_bot' && (
         <div className="flex-1 flex flex-col bg-slate-50/50 overflow-hidden min-h-0">
           {/* Bot Sub-Header Info */}

@@ -1,6 +1,6 @@
 # 🏗️ BizSocial Enterprise Architecture & Developer Documentation
 
-> **Complete System Specification, Component Directory, State Machine, 150-User Seeding Engine, Demo File Injection System & Modular Development Guide.**
+> **Complete System Specification, Component Directory, State Machine, Redux Store, Config Architecture, 150-User Seeding Engine & Modular Development Guide.**
 
 ---
 
@@ -17,214 +17,241 @@ BizSocial is a **Social B2B Commerce & Escrow Liquidation Platform** that integr
 
 ---
 
-## 👥 2. Backend Database Seeder & Demo File Injection System
-
-All platform demo user accounts are managed exclusively on the Go backend via [`e:/project/golang/db/seeder.go`](file:///e:/project/golang/db/seeder.go).
-
-### 2.1 Architecture Flow
+## 🗺️ 2. Architecture Diagram
 
 ```mermaid
 graph TD
-    A[Go Server Starts] --> B{DEBUG=true?}
-    B -- Yes --> C["Write demo_users.json to server root (150 users, 200 unique avatar pool)"]
-    B -- No --> D[Skip demo file generation]
-    C --> E{users table count < 150?}
-    D --> E
-    E -- Yes --> F["Batch seed 150 users into bigbiz.users (ON CONFLICT DO NOTHING)"]
-    E -- No --> G[Skip auto-seed]
-    F --> H[Users table ready]
-    G --> H
-    H --> I["GET /api/users — serve live user list"]
-    C --> J["GET/POST /demo_file_inject (DEBUG only)"]
-    J --> K["Read demo_users.json, Insert ONE BY ONE with ON CONFLICT UpdateAll"]
-    K --> L[PostgreSQL bigbiz.users fully refreshed]
+    A["Browser (Next.js 16 App Router)"] --> B["Redux Store (RTK)"]
+    B --> C["authSlice"]
+    B --> D["listingsSlice"]
+    B --> E["postsSlice"]
+    B --> F["chatSlice"]
+    B --> G["ordersSlice"]
+    B --> H["uiSlice"]
+    A --> I["AppContext (Side Effects & Actions)"]
+    I --> J["API Config (src/config/api.config.ts)"]
+    J --> K["Go Backend :8080"]
+    K --> L["PostgreSQL bigbiz"]
+    K --> M["Redis Cache"]
+    K --> N["Cloudinary CDN"]
 ```
 
-### 2.2 Key Environment Variables
+---
 
-| Variable | Default | Description |
-|---|---|---|
-| `DB_HOST` | `localhost` | PostgreSQL host |
-| `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_USER` | `postgres` | PostgreSQL user |
-| `DB_PASSWORD` | `1111` | PostgreSQL password |
-| `DB_NAME` | `bigbiz` | Database name |
-| `PORT` | `8000` | Go HTTP server port |
-| `DEBUG` | `false` | Enables `demo_users.json` generation & `/demo_file_inject` endpoint |
+## ⚙️ 3. Centralized API Configuration
 
-Set these in [`e:/project/golang/.env`](file:///e:/project/golang/.env).
-
-### 2.3 Auto 1st-Time Seeder
-
-[`db/seeder.go → Seed100Users()`](file:///e:/project/golang/db/seeder.go) is called automatically by [`db/connector.go`](file:///e:/project/golang/db/connector.go) right after `AutoMigrate`:
-
-- Checks `SELECT COUNT(*) FROM users`.
-- If `count < 150`: batch-inserts all **150 demo profiles** in chunks of 50 using `ON CONFLICT DO NOTHING`.
-- If `count >= 150`: skips — existing records are never overwritten.
-
-### 2.4 `GET/POST /demo_file_inject` — Debug Mode Only
+**File:** [`src/config/api.config.ts`](file:///e:/project/new_project/src/config/api.config.ts)
 
 > [!IMPORTANT]
-> This endpoint is **only accessible when `DEBUG=true`** in `.env`. It returns `403 Forbidden` in production.
+> ALL backend URLs, API base addresses, gateway URLs, and endpoint paths are defined exclusively in `api.config.ts`. **Do NOT hardcode any URLs in components or hooks.** Always import from this config.
 
-**How it works:**
-1. Reads [`demo_users.json`](file:///e:/project/golang/demo_users.json) from the Go server root (`e:/project/golang/`).
-2. If the file doesn't exist yet, it is auto-generated on the fly via `CreateRootDemoJsonFile()`.
-3. Inserts each user record **one by one** using `ON CONFLICT UpdateAll` — re-syncs the database with the latest JSON on every hit.
-
-**Sample response:**
-```json
-{
-  "status": "success",
-  "message": "Successfully injected users one by one from demo_users.json into database",
-  "injected_count": 150,
-  "total_in_db": 150,
-  "debug_mode": true
-}
-```
-
-### 2.5 200 Unique Avatar Pool
-
-[`db/seeder.go → Get200UniqueAvatars()`](file:///e:/project/golang/db/seeder.go) generates a pool of **200 provably unique avatar URLs** using deterministic `?sig=N` signatures (N = 1–200) across 56 distinct Unsplash portrait photo IDs:
-
-```go
-// Every avatar URL is unique — no two users share the same image
-avatarURL := fmt.Sprintf(
-    "https://images.unsplash.com/photo-%s?w=150&auto=format&fit=crop&q=80&sig=%d",
-    photoID, i+1,
-)
-```
-
-**Verified:** `Total users: 150 | Unique avatars: 150` ✅
-
-### 2.7 Post, Comment, React & PostMedia Database Schema (`server/models/post.go`)
-
-| Table | Column | Type | Constraints | Description |
-|---|---|---|---|---|
-| `posts` | `id` | `BIGSERIAL` | `PRIMARY KEY` | Post identifier |
-| `posts` | `user_id` | `BIGINT` | `NOT NULL, INDEX` | Foreign key referencing `users(id)` |
-| `posts` | `caption` | `TEXT` | `NOT NULL` | Post caption content |
-| `posts` | `create_date_time` | `TIMESTAMPTZ` | `AUTO CREATE` | Creation timestamp |
-| `posts` | `update_date_time` | `TIMESTAMPTZ` | `AUTO UPDATE` | Last modified timestamp |
-| `comments` | `id` | `BIGSERIAL` | `PRIMARY KEY` | Comment identifier |
-| `comments` | `post_id` | `BIGINT` | `NOT NULL, INDEX, CASCADE` | Foreign key referencing `posts(id)` |
-| `comments` | `user_id` | `BIGINT` | `NOT NULL, INDEX` | Foreign key referencing `users(id)` |
-| `comments` | `comment` | `TEXT` | `NOT NULL` | Comment body |
-| `comments` | `create_date_time` | `TIMESTAMPTZ` | `AUTO CREATE` | Creation timestamp |
-| `comments` | `update_date_time` | `TIMESTAMPTZ` | `AUTO UPDATE` | Last modified timestamp |
-| `reacts` | `id` | `BIGSERIAL` | `PRIMARY KEY` | React identifier |
-| `reacts` | `post_id` | `BIGINT` | `NOT NULL, INDEX, CASCADE` | Foreign key referencing `posts(id)` |
-| `reacts` | `user_id` | `BIGINT` | `NOT NULL, INDEX` | Foreign key referencing `users(id)` |
-| `reacts` | `love_react` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | Love reaction flag (`true`/`false`) |
-| `reacts` | `create_date_time` | `TIMESTAMPTZ` | `AUTO CREATE` | Creation timestamp |
-| `reacts` | `update_date_time` | `TIMESTAMPTZ` | `AUTO UPDATE` | Last modified timestamp |
-| `post_media` | `id` | `BIGSERIAL` | `PRIMARY KEY` | Media item identifier |
-| `post_media` | `post_id` | `BIGINT` | `INDEX` | Foreign key referencing `posts(id)` |
-| `post_media` | `user_id` | `BIGINT` | `NOT NULL, INDEX` | Foreign key referencing `users(id)` |
-| `post_media` | `media_url` | `TEXT` | `NOT NULL` | Media URL / Cloudinary secure URL |
-| `post_media` | `media_type` | `VARCHAR(50)` | `DEFAULT 'image'` | Type: `image` or `video` |
-| `post_media` | `public_id` | `VARCHAR(255)` | `NULLABLE` | Cloudinary asset public ID |
-| `post_media` | `create_date_time` | `TIMESTAMPTZ` | `AUTO CREATE` | Creation timestamp |
-| `post_media` | `update_date_time` | `TIMESTAMPTZ` | `AUTO UPDATE` | Last modified timestamp |
-
-### 2.8 Cloudinary Asset Management & Redis Caching Configuration
-
-#### Cloudinary Media Integration (`server/utils/cloudinary.go`)
-- **Auto Upload**: When creating a post via `POST /api/posts` or `POST /api/posts/upload`, any attached file or base64 data URI is automatically uploaded to the Cloudinary folder `bizsocial_posts`. The secure Cloudinary URL and `PublicID` are saved into `post_media`.
-- **Auto Deletion on Post Delete**: When deleting a post via `DELETE /api/posts/:id`, all associated media assets are automatically removed from Cloudinary (`uploader.Destroy`) and cascaded from PostgreSQL.
-
-#### Redis Standalone Configuration (`server/db/redis.go`)
-- **Configured Client**: Redis connection pool is initialized at startup via `db.InitRedis(cfg)` with non-blocking error handling and connection testing.
-- **Pure Configuration**: As requested, Redis is configured standalone and ready for caching without modifying any route logic.
+### 3.1 Environment Variables (`.env.local`)
 
 | Variable | Default | Description |
 |---|---|---|
-| `CLOUDINARY_CLOUD_NAME` | `bigbiz` | Cloudinary cloud name |
-| `cloudinary_API_Key` | `249359238934834` | Cloudinary API Key |
-| `cloudinary_API_Secret` | `mMdC-AU5KF6N0ZVNMrik_aqk6s0` | Cloudinary API Secret |
-| `REDIS_HOST` | `localhost` | Redis server host |
-| `REDIS_PORT` | `6379` | Redis server port |
-| `REDIS_PASSWORD` | `""` | Redis auth password |
-| `REDIS_DB` | `0` | Redis database index |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8080/api` | Go backend API base URL |
+| `NEXT_PUBLIC_SERVER_URL` | `http://localhost:8080` | Go backend server URL |
+| `NEXT_PUBLIC_CLIENT_URL` | `http://localhost:3000` | Next.js frontend URL |
+| `NEXT_PUBLIC_EWALLET_GATEWAY_URL` | `https://lyren-client.vercel.app` | E-Wallet payment portal URL |
+| `NEXT_PUBLIC_CHAIN_HOOK_GATEWAY_URL` | `https://chain-hook-backend-evj9.vercel.app` | Chain Hook API gateway URL |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | `bigbiz` | Cloudinary cloud name |
+| `NEXT_PUBLIC_CLOUDINARY_PRESET` | `bizsocial_posts` | Cloudinary upload preset |
+
+### 3.2 API Endpoints Map
+
+```typescript
+import { API_CONFIG } from '../config/api.config';
+
+// Resolve full URL
+const url = API_CONFIG.resolveUrl(API_CONFIG.ENDPOINTS.USERS.DETAIL('42'));
+// → http://localhost:8080/api/users/42
+
+// Direct fetch
+const res = await fetch(API_CONFIG.resolveUrl(API_CONFIG.ENDPOINTS.POSTS.REACT(postId)), { method: 'POST' });
+```
+
+| Domain | Endpoint Key | Path Pattern |
+|---|---|---|
+| Auth | `AUTH.ME` | `GET /users/me` |
+| Users | `USERS.LIST` | `GET /users` |
+| Users | `USERS.DETAIL(id)` | `GET /users/:id` |
+| Posts | `POSTS.LIST` | `GET /posts` |
+| Posts | `POSTS.REACT(id)` | `POST /posts/:id/react` |
+| Inbox | `INBOX.LIST(userId)` | `GET /inbox/:user_id` |
+| Inbox | `INBOX.CREATE` | `POST /inbox` |
+| Messages | `INBOX.MESSAGES(id)` | `GET /messages/:inbox_id` |
+| Messages | `INBOX.SEND_MESSAGE` | `POST /messages` |
+| Network | `NETWORK.REQUEST` | `POST /network/request` |
+| Network | `NETWORK.ACCEPT(id)` | `POST /network/accept/:id` |
+| Payment | `PAYMENT.GENERATE_TOKEN` | `POST /payment/generate-token` |
+| Payment | `PAYMENT.SAVE_SELLER_SETTINGS` | `POST /payment/settings` |
+| Orders | `ORDERS.LIST` | `GET /orders` |
+| Orders | `ORDERS.RELEASE_ESCROW(id)` | `POST /orders/:id/release-escrow` |
 
 ---
 
-## 🗂️ 3. Go Backend Structure (`e:/project/golang/`)
+## 🗂️ 4. Redux Store Architecture
+
+**Store Location:** [`src/store/`](file:///e:/project/new_project/src/store/)
 
 ```
-golang/
-├── main.go                     # Entry point — routes & server bootstrap
-├── .env                        # Environment config (DB_NAME=bigbiz, DEBUG=true, PORT=8000)
-├── demo_users.json             # Auto-generated when DEBUG=true (150 user profiles, 200 avatar pool)
-├── db/
-│   ├── connector.go            # PostgreSQL connection, AutoMigrate, VARCHAR id fix, seeder hook
-│   └── seeder.go               # Generate150Users(), Get200UniqueAvatars(), CreateRootDemoJsonFile(),
-│                               # InjectDemoFileUsersOneByOne(), Seed100Users()
-├── models/
-│   └── users.go                # GORM User model — id VARCHAR(50), all profile columns
-└── routes/
-    ├── routes.go               # Route group registration
-    └── users/
-        └── users.go            # GetAllUsers, GetUserByID, DemoFileInjectEndpoint
+src/store/
+├── index.ts              # configureStore — registers all slices
+├── hooks.ts              # useAppDispatch / useAppSelector typed hooks
+├── StoreProvider.tsx     # <Provider store={store}> — mounted in app/layout.tsx
+└── slices/
+    ├── authSlice.ts      # currentUser, isLoggedIn, users, onboarding state
+    ├── listingsSlice.ts  # listings, selectedListing, category, searchQuery
+    ├── postsSlice.ts     # posts, stories, selectedStory
+    ├── chatSlice.ts      # conversations, messages, notifications, activeChatSellerId
+    ├── ordersSlice.ts    # orders, offers (Sell-to-Us), reviews, disputes
+    └── uiSlice.ts        # activeTab, modal visibility flags, drawer state
+```
+
+### 4.1 Usage in Components
+
+```tsx
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setActiveTab } from '../store/slices/uiSlice';
+import { addMessage } from '../store/slices/chatSlice';
+
+export const MyComponent = () => {
+  const dispatch = useAppDispatch();
+  const activeTab = useAppSelector((state) => state.ui.activeTab);
+  const currentUser = useAppSelector((state) => state.auth.currentUser);
+
+  const navigate = (tab: string) => dispatch(setActiveTab(tab));
+};
+```
+
+### 4.2 Slice Summary
+
+| Slice | State Fields | Key Actions |
+|---|---|---|
+| `auth` | `currentUser`, `isLoggedIn`, `users`, `showOnboarding` | `setCurrentUser`, `setUsers`, `logout`, `toggleUserVerification`, `updateUserRole` |
+| `listings` | `listings`, `selectedListing`, `selectedCategory`, `searchQuery` | `addListing`, `updateListing`, `removeListing`, `setSelectedCategory` |
+| `posts` | `posts`, `stories`, `selectedStory` | `addPost`, `removePost`, `toggleLikePost`, `addCommentToPost`, `addStory` |
+| `chat` | `conversations`, `messages`, `notifications`, `activeChatSellerId` | `addMessage`, `addOrUpdateConversation`, `addNotification`, `markAllNotificationsRead` |
+| `orders` | `orders`, `offers`, `reviews`, `disputes` | `addOrder`, `updateOrderStatus`, `updateOfferStatus`, `updateDisputeStatus` |
+| `ui` | `activeTab`, `showSellToUsModal`, `showCreateListingModal`, `showLeftDrawer` | `setActiveTab`, `setShowCreateListingModal`, `setShowLeftDrawer` |
+
+---
+
+## 🗂️ 5. Frontend Next.js App Router — Route Map
+
+```
+app/
+├── layout.tsx                      # Root layout — StoreProvider + AppProvider
+├── page.tsx                        # / — Home feed
+├── feed/page.tsx                   # /feed — Social posts & stories
+├── marketplace/page.tsx            # /marketplace — Product catalog grid
+├── settings/page.tsx               # /settings — Profile, Payment, Network, Security
+├── orders/page.tsx                 # /orders — Escrow order tracker
+├── dashboard/page.tsx              # /dashboard — Seller analytics & storefront
+├── procurement/page.tsx            # /procurement — B2B buy desk (offers review)
+├── admin/page.tsx                  # /admin — Super Admin mission control
+├── help/page.tsx                   # /help — FAQ & support articles
+├── sell-to-us/page.tsx             # /sell-to-us — Direct liquidation offer tracker
+├── notifications/page.tsx          # /notifications — Alerts & system requests
+├── messages/page.tsx               # /messages — Direct B2B messaging hub
+├── messages/[id]/page.tsx          # /messages/:encryptedId — specific chat thread
+├── profile/[id]/page.tsx           # /profile/:encryptedProfileId — seller storefront
+└── product/[id]/page.tsx           # /product/:encryptedProductId — product detail
+```
+
+> [!IMPORTANT]
+> **No catch-all `[...slug]` routes.** Every section of the app uses a dedicated, named Next.js App Router page. Dynamic parameters use encrypted slugs from [`src/utils/routeCrypto.ts`](file:///e:/project/new_project/src/utils/routeCrypto.ts).
+
+---
+
+## 🧩 6. Modular Component Directory
+
+```
+src/
+├── config/
+│   └── api.config.ts               # ← ALL API URLs & endpoint maps live here
+├── store/
+│   ├── index.ts                    # Redux configureStore
+│   ├── hooks.ts                    # useAppDispatch / useAppSelector
+│   ├── StoreProvider.tsx           # <Provider store={store}>
+│   └── slices/
+│       ├── authSlice.ts
+│       ├── listingsSlice.ts
+│       ├── postsSlice.ts
+│       ├── chatSlice.ts
+│       ├── ordersSlice.ts
+│       └── uiSlice.ts
+├── context/
+│   └── AppContext.tsx              # Global side-effects, API calls, action handlers
+├── components/
+│   ├── AppShell.tsx                # Layout: Header + Sidebars + Drawers + Modals
+│   ├── Header.tsx                  # Composed from header/ subcomponents
+│   ├── header/                     # ─── MODULAR HEADER PARTS ───
+│   │   ├── HeaderSearchBar.tsx
+│   │   ├── HeaderCategoryChips.tsx
+│   │   ├── HeaderNotificationsMenu.tsx
+│   │   ├── HeaderMessagesDropdown.tsx
+│   │   └── HeaderProfileMenu.tsx
+│   ├── settings/                   # ─── MODULAR SETTINGS TABS ───
+│   │   ├── ProfileSettingsTab.tsx
+│   │   ├── PaymentMethodTab.tsx
+│   │   ├── NetworkConnectionsTab.tsx
+│   │   ├── SecuritySettingsTab.tsx
+│   │   └── PreferencesTab.tsx
+│   ├── listing-detail/             # ─── MODULAR LISTING DETAIL ───
+│   │   ├── ListingImageGallery.tsx
+│   │   ├── ListingSellerCard.tsx
+│   │   ├── ListingPricingOptions.tsx
+│   │   └── ListingReviewsSection.tsx
+│   ├── seller-profile/             # ─── MODULAR SELLER PROFILE ───
+│   │   ├── SellerHeaderCard.tsx
+│   │   ├── SellerProductsTab.tsx
+│   │   └── SellerPostsTab.tsx
+│   ├── messages/                   # ─── MODULAR MESSAGING ───
+│   │   ├── ConversationListPanel.tsx
+│   │   ├── ChatMessageThread.tsx
+│   │   └── BizBotChatPanel.tsx
+│   ├── admin/                      # ─── MODULAR ADMIN CONTROLLERS ───
+│   │   ├── AdminOverviewSection.tsx
+│   │   ├── AdminEscrowVaultSection.tsx
+│   │   ├── AdminUserGovernanceSection.tsx
+│   │   ├── AdminListingCatalogSection.tsx
+│   │   ├── AdminPolicyFeeSection.tsx
+│   │   └── AdminAuditLogsSection.tsx
+│   ├── listing-create/             # ─── MODULAR LISTING CREATOR ───
+│   │   ├── ImageGalleryUploader.tsx
+│   │   ├── VariantManager.tsx
+│   │   └── OptionSectionBuilder.tsx
+│   ├── post-create/                # ─── MODULAR POST CREATION ───
+│   │   ├── SellerPostOptions.tsx
+│   │   └── PostMediaUploader.tsx
+│   ├── DirectMessagesView.tsx      # Messages page — composed from messages/ parts
+│   ├── ListingDetailModal.tsx      # Product modal — composed from listing-detail/ parts
+│   ├── SellerProfileModal.tsx      # Profile modal — composed from seller-profile/ parts
+│   ├── SettingsPrivacyView.tsx     # Settings — composed from settings/ tabs
+│   ├── MarketplaceView.tsx
+│   ├── FeedView.tsx
+│   ├── OrdersView.tsx
+│   ├── SellerDashboard.tsx
+│   ├── ProcurementDashboard.tsx
+│   ├── AdminDashboard.tsx
+│   ├── HelpSupportView.tsx
+│   ├── SellToUsTracker.tsx
+│   ├── LoginPage.tsx
+│   └── OnboardingModal.tsx
+├── hooks/
+│   ├── useEWalletPayment.ts        # Payment flow hook (uses API_CONFIG)
+│   └── useIncomingNetworkRequests.ts # Network accept/reject hook (uses API_CONFIG)
+├── utils/
+│   └── routeCrypto.ts              # encodeProfileSlug / decodeProductSlug etc.
+├── data/
+│   └── mockData.ts                 # 6 core test personas (no client-side seeding)
+└── types.ts                        # Unified TypeScript Data Contracts
 ```
 
 ---
 
-## 🗂️ 4. Frontend Modular Codebase (`e:/project/new_project/`)
-
-```
-new_project/
-├── server.ts                           # Express REST API Server with Escrow endpoints
-├── src/
-│   ├── types.ts                        # Unified TypeScript Data Contracts
-│   ├── App.tsx                         # Main Client Controller, isUserProfileComplete(),
-│   │                                   # GET /api/users sync on mount, Admin layout (1600px)
-│   ├── data/
-│   │   └── mockData.ts                 # 6 core test personas only (no client-side seeding)
-│   ├── components/
-│   │   ├── admin/                      # ─── MODULAR ADMIN CONTROLLERS ───
-│   │   │   ├── AdminOverviewSection.tsx
-│   │   │   ├── AdminEscrowVaultSection.tsx
-│   │   │   ├── AdminUserGovernanceSection.tsx
-│   │   │   ├── AdminListingCatalogSection.tsx
-│   │   │   ├── AdminPolicyFeeSection.tsx
-│   │   │   └── AdminAuditLogsSection.tsx
-│   │   ├── listing-create/             # ─── MODULAR LISTING CREATOR ───
-│   │   │   ├── ImageGalleryUploader.tsx        # Multi-photo upload & Cover selector
-│   │   │   ├── VariantManager.tsx              # Variant SKUs, price deltas & defaults
-│   │   │   └── OptionSectionBuilder.tsx        # Single/Multi-choice modifiers with defaults
-│   │   ├── post-create/                # ─── MODULAR POST CREATION SUITE ───
-│   │   │   ├── SellerPostOptions.tsx           # Commercial format, tagged products, badges, CTAs
-│   │   │   └── PostMediaUploader.tsx           # Dual input: Local File Upload + Direct URL Link
-│   │   ├── messages/                   # ─── MODULAR MESSAGING SYSTEM ───
-│   │   │   └── BizBotChatPanel.tsx             # 24/7 AI Business Assistant with FAQs
-│   │   ├── AdminDashboard.tsx          # Private Mission Control Coordinator
-│   │   ├── CreateListingModal.tsx      # Main Listing Creation Modal
-│   │   ├── CreatePostModal.tsx         # Social Feed Post Creator (with Seller Tools)
-│   │   ├── ListingDetailModal.tsx
-│   │   ├── LoginPage.tsx
-│   │   ├── MarketplaceView.tsx
-│   │   ├── OnboardingModal.tsx         # Role picker — Buyer/Seller only (no Premium at signup)
-│   │   ├── OrdersView.tsx              # Escrow Payout Tracker & Delivery Confirmation
-│   │   ├── ProcurementDashboard.tsx    # "Sell to Us" Review & Counter-Offer Desk
-│   │   ├── RightBusinessSidebar.tsx    # RFQ Buy Desk Feed & Trending Products
-│   │   ├── SellToUsModal.tsx           # Direct Buyout Offer Submission Modal
-│   │   ├── SellToUsTracker.tsx         # Direct Buyout Status & Negotiation Tracker
-│   │   ├── SellerDashboard.tsx         # Merchant Analytics, Sales & Storefront Manager
-│   │   └── SettingsPrivacyView.tsx     # Profile & Settings — Network (Followers/Following/Connections)
-```
-
----
-
-## ⚙️ 5. Dynamic Pricing Calculation Engine
-
-$$\text{Final Unit Price} = \max\left(0, \text{Base Price} + \Delta_{\text{Variant}} + \sum \Delta_{\text{Option Items}} + \sum \Delta_{\text{Feature Add-ons}}\right)$$
-
-$$\text{Total Transaction Amount} = (\text{Final Unit Price} \times \text{Quantity}) + \text{Shipping Fee}$$
-
----
-
-## 🔒 6. Roles & Permission Hierarchy
+## 🔒 7. Roles & Permission Hierarchy
 
 | Role Key | Name | Access Capabilities |
 |---|---|---|
@@ -236,53 +263,44 @@ $$\text{Total Transaction Amount} = (\text{Final Unit Price} \times \text{Quanti
 | `procurement` | Corporate Buy Desk | Review "Sell to Us" direct offers, issue counter-proposals, instant payouts. |
 
 > [!IMPORTANT]
-> **1st User Admin Invariant**: The 1st registered user (`user.ID == 1` / 1st OAuth account) is **always assigned the `admin` role**. If any other role (Buyer/Seller) is selected during onboarding, it is ignored for the 1st user and their role remains `admin`.
-
-
----
-
-## 🧩 7. Onboarding Logic
-
-Onboarding is triggered by `isUserProfileComplete(user)` in [`App.tsx`](file:///e:/project/new_project/src/App.tsx) — **not** by any boolean flag or `localStorage` key. It checks actual column data:
-
-```ts
-const isUserProfileComplete = (user: User): boolean => {
-  if (!user.name || !user.email || !user.location || !user.bio) return false;
-  if ((user.role === 'seller_free' || user.role === 'seller_premium') && !user.companyName) return false;
-  return true;
-};
-```
-
-| Column | Required For |
-|---|---|
-| `name` | All roles |
-| `email` | All roles |
-| `location` | All roles |
-| `bio` | All roles |
-| `companyName` | Sellers only |
+> **1st User Admin Invariant**: The 1st registered user (`user.ID == 1`) is **always assigned the `admin` role**. If any other role is selected during onboarding, it is ignored and their role remains `admin`.
 
 ---
 
-## 🚀 8. Developer Quick Start
+## 🔐 8. URL Encryption & Dynamic Routes
 
-### Go Backend
+**File:** [`src/utils/routeCrypto.ts`](file:///e:/project/new_project/src/utils/routeCrypto.ts)
+
+All dynamic route parameters are encrypted to prevent database ID exposure in URLs.
+
+| Function | Example Input | Example Output |
+|---|---|---|
+| `encodeProfileSlug('105')` | `'105'` | `'u_MTA1'` |
+| `decodeProfileSlug('u_MTA1')` | `'u_MTA1'` | `'105'` |
+| `encodeProductSlug('830')` | `'830'` | `'p_ODMw'` |
+| `encodeChatSlug('21')` | `'21'` | `'c_MjE='` |
+
+---
+
+## 🚀 9. Developer Quick Start
+
+### 9.1 Go Backend (`:8080`)
 
 ```bash
 cd e:/project/golang
 
 # 1. Configure .env
-#    DB_NAME=bigbiz  DEBUG=true  PORT=8000
+#    DB_NAME=bigbiz  DEBUG=true  PORT=8080
 
 # 2. Run server — auto-migrates & seeds 150 users on 1st run
 go run main.go
-# [Go-DB-Seeder] 🚀 1st-time population complete! Users table now contains 150 total records.
-# Server: http://localhost:8000
+# Server: http://localhost:8080
 
-# 3. Optional: force re-inject demo users one-by-one from demo_users.json
-curl http://localhost:8000/demo_file_inject
+# 3. Optional: force re-inject demo users one-by-one
+curl http://localhost:8080/demo_file_inject
 ```
 
-### Next.js Frontend
+### 9.2 Next.js Frontend (`:3000`)
 
 ```bash
 cd e:/project/new_project
@@ -294,4 +312,69 @@ npm run dev
 ```
 
 > [!IMPORTANT]
-> Start the Go backend on `:8000` **before** the frontend so `GET /api/users` resolves correctly on mount.
+> Start the Go backend on `:8080` **before** the frontend so `GET /api/users` resolves correctly on mount.
+
+### 9.3 Database Reset
+
+```bash
+# From project root:
+npm run db:reset
+
+# Or via HTTP:
+curl -X POST http://localhost:8080/api/posts/reset-all
+```
+
+---
+
+## 📦 10. Backend Database Seeder
+
+All platform demo user accounts are managed exclusively on the Go backend via `e:/project/golang/db/seeder.go`.
+
+### Key Environment Variables (Go `.env`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_USER` | `postgres` | PostgreSQL user |
+| `DB_PASSWORD` | `1111` | PostgreSQL password |
+| `DB_NAME` | `bigbiz` | Database name |
+| `PORT` | `8080` | Go HTTP server port |
+| `DEBUG` | `false` | Enables `demo_users.json` & `/demo_file_inject` |
+| `CLOUDINARY_CLOUD_NAME` | `bigbiz` | Cloudinary cloud |
+| `REDIS_HOST` | `localhost` | Redis host |
+| `REDIS_PORT` | `6379` | Redis port |
+
+### Database Schema Quick Reference
+
+| Table | Key Columns |
+|---|---|
+| `users` | `id`, `full_name`, `email`, `role_name`, `company_name`, `avatar_url` |
+| `posts` | `id`, `user_id`, `caption` |
+| `comments` | `id`, `post_id`, `user_id`, `comment` |
+| `reacts` | `id`, `post_id`, `user_id`, `love_react` |
+| `post_media` | `id`, `post_id`, `media_url`, `media_type`, `public_id` |
+| `inbox` | `id`, `initator_id`, `participator_id` |
+| `messages` | `id`, `inbox_id`, `sender_id`, `receiver_id`, `message`, `is_read` |
+
+---
+
+## ⚙️ 11. Dynamic Pricing Calculation Engine
+
+$$\text{Final Unit Price} = \max\left(0, \text{Base Price} + \Delta_{\text{Variant}} + \sum \Delta_{\text{Option Items}}\right)$$
+
+$$\text{Total Transaction Amount} = (\text{Final Unit Price} \times \text{Quantity}) + \text{Shipping Fee}$$
+
+---
+
+## 🧩 12. Onboarding Logic
+
+Onboarding is triggered by `isUserProfileComplete(user)` — **not** by any boolean flag or `localStorage` key:
+
+```ts
+const isUserProfileComplete = (user: User): boolean => {
+  if (!user.name || !user.email || !user.location || !user.bio) return false;
+  if ((user.role === 'seller_free' || user.role === 'seller_premium') && !user.companyName) return false;
+  return true;
+};
+```

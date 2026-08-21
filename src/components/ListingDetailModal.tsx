@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
 import { User, Listing, Review, ProductVariant, ProductFeature, ProductOptionSection, ProductOptionItem } from '../types';
@@ -50,7 +50,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
   const [shippingAddress, setShippingAddress] = useState(currentUser.location || '');
   const [isBuying, setIsBuying] = useState(false);
 
-  // ── Dynamic Customization State ──
+  // ΓöÇΓöÇ Dynamic Customization State ΓöÇΓöÇ
   // 1. Variant Selection (e.g. Color, Style, Model)
   const defaultVariants: ProductVariant[] = useMemo(() => {
     if (listing.variants && listing.variants.length > 0) {
@@ -79,7 +79,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState<number>(1);
 
-  // ── Option Section selections: { [sectionId]: itemId[] }
+  // ΓöÇΓöÇ Option Section selections: { [sectionId]: itemId[] }
   // For 'single' sections, max one itemId in the array.
   const [sectionSelections, setSectionSelections] = useState<Record<string, string[]>>({});
 
@@ -177,20 +177,23 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
 
   const sellerReviews = reviews.filter(r => r.sellerId === listing.sellerId);
 
-  const handleConfirmPurchase = (e: React.FormEvent) => {
+  const handleConfirmPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsBuying(true);
-    setTimeout(() => {
-      onBuyNow(listing, shippingAddress, {
+    try {
+      await onBuyNow(listing, shippingAddress, {
         variant: selectedVariant,
         selectedFeatures,
         quantity,
         finalPrice: totalPrice
       });
-      setIsBuying(false);
       setShowCheckoutModal(false);
       onClose();
-    }, 600);
+    } catch (err) {
+      console.error('Purchase error:', err);
+    } finally {
+      setIsBuying(false);
+    }
   };
 
   return (
@@ -201,7 +204,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
     >
       <div className="min-h-full flex items-start lg:items-center justify-center p-2 sm:p-3 lg:p-5">
 
-        {/* Modal Card — grows wide on desktop, full-width on mobile */}
+        {/* Modal Card ΓÇö grows wide on desktop, full-width on mobile */}
         <div className="bg-white rounded-2xl lg:rounded-3xl w-full max-w-[98vw] sm:max-w-[95vw] lg:max-w-7xl xl:max-w-[1320px] border border-slate-200 shadow-2xl overflow-hidden relative lg:max-h-[94vh] flex flex-col">
 
           {/* Close Button */}
@@ -345,7 +348,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* ── PRODUCT MODIFICATION FEATURES ── */}
+                {/* ΓöÇΓöÇ PRODUCT MODIFICATION FEATURES ΓöÇΓöÇ */}
 
                 {/* 1. DYNAMIC VARIANT SELECTOR BUTTONS */}
                 {activeVariants && activeVariants.length > 0 && (
@@ -609,7 +612,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                         <div key={rev.id} className="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-slate-900">{rev.buyerName}</span>
-                            <span className="text-amber-500 font-bold">{"★".repeat(rev.rating)}</span>
+                            <span className="text-amber-500 font-bold">{"Γÿà".repeat(rev.rating)}</span>
                           </div>
                           <p className="text-slate-600">{rev.comment}</p>
                         </div>
@@ -632,7 +635,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm lg:text-base py-3 lg:py-3.5 px-4 sm:px-6 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ShoppingBag className="w-5 h-5 shrink-0" />
-                  <span>Buy ({quantity} {quantity === 1 ? 'item' : 'items'}) · ${totalPrice.toFixed(2)} via Escrow</span>
+                  <span>Buy ({quantity} {quantity === 1 ? 'item' : 'items'}) ┬╖ ${totalPrice.toFixed(2)} via Escrow</span>
                 </button>
               </div>
 
@@ -686,7 +689,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
                   <span className="text-slate-600 font-semibold block">Custom Add-on Features:</span>
                   {selectedFeatures.map(f => (
                     <div key={f.id} className="flex justify-between text-[11px] pl-2 text-emerald-800">
-                      <span>• {f.name}</span>
+                      <span>ΓÇó {f.name}</span>
                       <span className="font-bold">+${f.price.toFixed(2)}</span>
                     </div>
                   ))}
@@ -726,7 +729,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({
               </div>
 
               <p className="text-[11px] text-slate-500">
-                🔒 Funds will be held safely in the BizSocial Escrow Vault and will only be released to {listing.sellerName} when you confirm delivery.
+                ≡ƒöÆ Funds will be held safely in the BizSocial Escrow Vault and will only be released to {listing.sellerName} when you confirm delivery.
               </p>
 
               <button

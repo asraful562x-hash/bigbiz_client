@@ -12,7 +12,6 @@ export const VariantManager: React.FC<VariantManagerProps> = ({ variants, setVar
     const newVariant: ProductVariant = {
       id: `var_${Date.now()}`,
       name: '',
-      sku: '',
       priceDelta: 0,
       stockQty: 10,
       isDefault: variants.length === 0
@@ -45,7 +44,7 @@ export const VariantManager: React.FC<VariantManagerProps> = ({ variants, setVar
       <div className="flex items-center justify-between">
         <div>
           <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-            <Tag className="w-4 h-4 text-indigo-600" /> Product Variants (SKU, Size, Color)
+            <Tag className="w-4 h-4 text-indigo-600" /> Product Variants (Size, Color, Option)
           </h4>
           <p className="text-[11px] text-slate-500 mt-0.5">
             Create distinct product models with customized prices and stock counts.
@@ -74,15 +73,7 @@ export const VariantManager: React.FC<VariantManagerProps> = ({ variants, setVar
                 value={v.name}
                 onChange={(e) => updateVariant(v.id, { name: e.target.value })}
                 placeholder="Variant Name (e.g. 500ml / Extra Large / Matte Black)"
-                className="flex-1 min-w-[160px] text-xs font-bold px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
-              />
-
-              <input
-                type="text"
-                value={v.sku || ''}
-                onChange={(e) => updateVariant(v.id, { sku: e.target.value })}
-                placeholder="SKU Code"
-                className="w-28 text-xs font-mono px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="flex-1 min-w-[180px] text-xs font-bold px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
               />
 
               <div className="flex items-center gap-1 w-28">

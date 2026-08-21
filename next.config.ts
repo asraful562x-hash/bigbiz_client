@@ -17,12 +17,14 @@ const nextConfig: NextConfig = {
     // Rely on tsc for strict checking
     ignoreBuildErrors: false,
   },
-  // Proxy all /api/* requests to the Go backend on port 8080
+  devIndicators: false,
+  // Proxy all /api/* requests to the Go backend (Render URL in production or localhost in dev)
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_SERVER_URL || process.env.SERVER_URL || 'https://bigbiz-backend.onrender.com';
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*',
+        destination: `${backendUrl.replace(/\/+$/, '')}/api/:path*`,
       },
     ];
   },

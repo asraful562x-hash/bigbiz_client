@@ -140,3 +140,9 @@ Index 5: Moderator
 - Modal clipped on mobile: outer overlay needs overflow-y-auto + flex items-start justify-center py-6
 - Drawer conflict: Left drawer breakpoint = 1300px | Right drawer breakpoint = 881px
 - Search bar + drawer button height mismatch: use h-10 on both + items-stretch on parent flex
+
+
+
+
+
+

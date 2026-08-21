@@ -63,8 +63,13 @@ interface HeaderProps {
   conversations?: Conversation[];
   messages?: Message[];
   onSendMessage?: (conversationId: string, text: string) => void;
+  activeConversationId?: string | null;
   /** When true (e.g. Settings / Help), hides nav tabs and sidebars — full screen mode */
   isFullScreen?: boolean;
+  incomingNetworkRequests?: Array<{ id: number; sender_id: string; receiver_id: string; create_date_time: string }>;
+  onAcceptNetworkRequest?: (requestId: number) => void;
+  onRejectNetworkRequest?: (requestId: number) => void;
+  onMarkConversationRead?: (conversationId: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -95,7 +100,12 @@ export const Header: React.FC<HeaderProps> = ({
   conversations = [],
   messages = [],
   onSendMessage,
+  activeConversationId,
   isFullScreen = false,
+  incomingNetworkRequests = [],
+  onAcceptNetworkRequest,
+  onRejectNetworkRequest,
+  onMarkConversationRead,
 }) => {
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -103,8 +113,38 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileChatTab, setMobileChatTab] = useState<'contacts' | 'chat'>('contacts');
   
   // Quick Chat Inside Overlay
-  const [selectedConvId, setSelectedConvId] = useState<string | null>(conversations[0]?.id || null);
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(activeConversationId || conversations[0]?.id || null);
   const [quickMsgText, setQuickMsgText] = useState('');
+
+  // Ref to track which convId we already marked read — prevents infinite loops
+  const lastMarkedRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (activeConversationId) {
+      setSelectedConvId(activeConversationId);
+      setMobileChatTab('chat');
+      setOverlayChatTab('users');
+      // Only call mark-read if this is a newly-selected conversation
+      if (onMarkConversationRead && lastMarkedRef.current !== activeConversationId) {
+        lastMarkedRef.current = activeConversationId;
+        onMarkConversationRead(activeConversationId);
+      }
+    } else if (conversations.length > 0 && (!selectedConvId || !conversations.some(c => c.id === selectedConvId))) {
+      setSelectedConvId(conversations[0].id);
+    }
+  // onMarkConversationRead is stable (useCallback) — safe to include
+  }, [activeConversationId, conversations]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When the message panel opens, mark the currently selected conv as read (once)
+  const prevIsOpenRef = React.useRef(false);
+  React.useEffect(() => {
+    const justOpened = isMessagesOpen && !prevIsOpenRef.current;
+    prevIsOpenRef.current = isMessagesOpen;
+    if (justOpened && selectedConvId && onMarkConversationRead && lastMarkedRef.current !== selectedConvId) {
+      lastMarkedRef.current = selectedConvId;
+      onMarkConversationRead(selectedConvId);
+    }
+  }, [isMessagesOpen, selectedConvId, onMarkConversationRead]);
   
   // Overlay Mode: 'users' vs 'bot'
   const [overlayChatTab, setOverlayChatTab] = useState<'users' | 'bot'>('users');
@@ -112,7 +152,7 @@ export const Header: React.FC<HeaderProps> = ({
     {
       id: 'welcome',
       role: 'bot',
-      text: "👋 **Hi there! I'm BizBot AI**, your 24/7 business assistant.\n\nI can help you with account issues, creating listings, orders, escrow, payments, and platform rules. How can I help you today?",
+      text: "≡ƒæï **Hi there! I'm BizBot AI**, your 24/7 business assistant.\n\nI can help you with account issues, creating listings, orders, escrow, payments, and platform rules. How can I help you today?",
       time: 'Just now',
       followUps: ['Login & Account', 'Orders & Escrow', 'Create a Listing', 'Payments & Billing']
     }
@@ -141,19 +181,19 @@ export const Header: React.FC<HeaderProps> = ({
       let followUps = ['Login & Account', 'Orders & Escrow', 'Payments & Billing'];
 
       if (lower.includes('login') || lower.includes('password') || lower.includes('access')) {
-        reply = "**Login Assistance:**\n• Verify your registered email.\n• Use 'Forgot Password' on the login card to reset credentials.\n• OAuth logins bypass passwords securely.\n• Contact support@bizsocial.com if locked.";
+        reply = "**Login Assistance:**\nΓÇó Verify your registered email.\nΓÇó Use 'Forgot Password' on the login card to reset credentials.\nΓÇó OAuth logins bypass passwords securely.\nΓÇó Contact support@bizsocial.com if locked.";
         followUps = ['How do I change email?', 'I need MFA help'];
       } else if (lower.includes('order') || lower.includes('escrow') || lower.includes('buy')) {
-        reply = "**Escrow Protection:**\n• Funds are held in neutral escrow until delivery confirmation.\n• Track live milestones under Orders & Escrow.\n• 100% money-back guarantee for disputed orders.";
+        reply = "**Escrow Protection:**\nΓÇó Funds are held in neutral escrow until delivery confirmation.\nΓÇó Track live milestones under Orders & Escrow.\nΓÇó 100% money-back guarantee for disputed orders.";
         followUps = ['How do I confirm delivery?', 'Raise an order dispute'];
       } else if (lower.includes('listing') || lower.includes('sell') || lower.includes('product')) {
-        reply = "**Creating a Listing:**\n• Click the **＋ button** at the top right.\n• Choose category (B2B, Goods, Services, Rentals).\n• Set price, stock, and upload images to publish instantly.";
+        reply = "**Creating a Listing:**\nΓÇó Click the **∩╝ï button** at the top right.\nΓÇó Choose category (B2B, Goods, Services, Rentals).\nΓÇó Set price, stock, and upload images to publish instantly.";
         followUps = ['How to get verified?', 'Listing pricing tips'];
       } else if (lower.includes('payment') || lower.includes('billing') || lower.includes('fee') || lower.includes('refund')) {
-        reply = "**Payments & Billing:**\n• 3% seller fee on successful sales.\n• Payouts processed in 24–48 hours via Bank Transfer or Card.\n• Refunds processed in 5–7 days.";
+        reply = "**Payments & Billing:**\nΓÇó 3% seller fee on successful sales.\nΓÇó Payouts processed in 24ΓÇô48 hours via Bank Transfer or Card.\nΓÇó Refunds processed in 5ΓÇô7 days.";
         followUps = ['View my invoices', 'Upgrade subscription'];
       } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('help')) {
-        reply = "👋 **Hello!** I am BizBot AI. Pick a topic or type any question below to get instant answers!";
+        reply = "≡ƒæï **Hello!** I am BizBot AI. Pick a topic or type any question below to get instant answers!";
       }
 
       setOverlayBotMessages(prev => [
@@ -191,11 +231,11 @@ export const Header: React.FC<HeaderProps> = ({
 
   const categories = [
     { id: 'all', label: 'All Categories' },
-    { id: 'new_products', label: '✨ New Products' },
-    { id: 'second_hand', label: '🔄 Second-hand & Resale' },
-    { id: 'services', label: '🛠️ Services Marketplace' },
-    { id: 'rentals', label: '🗝️ Rental Marketplace' },
-    { id: 'wholesale_b2b', label: '📦 Wholesale / B2B' },
+    { id: 'new_products', label: 'Γ£¿ New Products' },
+    { id: 'second_hand', label: '≡ƒöä Second-hand & Resale' },
+    { id: 'services', label: '≡ƒ¢á∩╕Å Services Marketplace' },
+    { id: 'rentals', label: '≡ƒù¥∩╕Å Rental Marketplace' },
+    { id: 'wholesale_b2b', label: '≡ƒôª Wholesale / B2B' },
   ];
 
   const categoryLabels: Record<string, string> = {
@@ -225,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-[1800px] mx-auto px-2.5 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2 sm:gap-4 relative">
           
-          {/* Left Brand Container (Menu + Logo + Subtitle) — stays strictly on left */}
+          {/* Left Brand Container (Menu + Logo + Subtitle) ΓÇö stays strictly on left */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* In full-screen mode show a back arrow; otherwise hamburger */}
             {isFullScreen ? (
@@ -324,7 +364,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Action Tools & User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Direct Offer Action Button — hide for admin */}
+            {/* Direct Offer Action Button ΓÇö hide for admin */}
             {currentUser.role !== 'admin' && currentUser.role !== 'moderator' && (
               <button
                 onClick={onOpenSellToUs}
@@ -335,7 +375,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Admin Private Badge — shown instead for admin roles */}
+            {/* Admin Private Badge ΓÇö shown instead for admin roles */}
             {(currentUser.role === 'admin' || currentUser.role === 'moderator') && (
               <button
                 onClick={() => setActiveTab('admin')}
@@ -346,7 +386,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Create Post / Listing — hide for admin */}
+            {/* Create Post / Listing ΓÇö hide for admin */}
             {currentUser.role !== 'admin' && currentUser.role !== 'moderator' && (
               <button
                 onClick={onOpenCreateModal}
@@ -454,12 +494,60 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {/* Notifications List */}
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {notifications.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 text-xs">
-                        No notifications yet.
+                    {/* Incoming Connection Requests */}
+                    {(activeNotifFilter === 'all' || activeNotifFilter === 'updates') && incomingNetworkRequests && incomingNetworkRequests.length > 0 && (
+                      <div className="space-y-2 mb-2">
+                        {incomingNetworkRequests.map((req) => (
+                          <div
+                            key={req.id}
+                            className="p-3 rounded-2xl border bg-indigo-950/70 border-indigo-500/50 text-white shadow-md text-left"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                                <Sparkles className="w-3 h-3 text-amber-300" /> Connection Request
+                              </h4>
+                              <span className="text-[10px] text-slate-400">Just now</span>
+                            </div>
+                            <p className="text-[11px] text-slate-200 mt-1 leading-normal">
+                              User #{req.sender_id} requested to connect with your business network.
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => onAcceptNetworkRequest?.(req.id)}
+                                className="flex-1 py-1 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
+                              >
+                                <Check className="w-3 h-3" /> Accept
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onRejectNetworkRequest?.(req.id)}
+                                className="py-1 px-2.5 bg-white/10 hover:bg-rose-600/60 text-slate-200 rounded-lg text-xs font-bold transition-colors"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      notifications.map((n) => (
+                    )}
+
+                    {(() => {
+                      const filteredNotifications = notifications.filter(n => {
+                        if (activeNotifFilter === 'all') return true;
+                        if (activeNotifFilter === 'orders') return n.type === 'order' || n.type === 'offer_update';
+                        return n.type !== 'order' && n.type !== 'offer_update';
+                      });
+
+                      if (filteredNotifications.length === 0 && (!incomingNetworkRequests || incomingNetworkRequests.length === 0 || activeNotifFilter === 'orders')) {
+                        return (
+                          <div className="text-center py-8 text-slate-400 text-xs">
+                            No notifications in this tab.
+                          </div>
+                        );
+                      }
+
+                      return filteredNotifications.map((n) => (
                         <div
                           key={n.id}
                           className={`p-3 rounded-2xl border transition-all text-left ${
@@ -474,8 +562,8 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                           <p className="text-[11px] text-slate-300 mt-1 leading-normal">{n.body}</p>
                         </div>
-                      ))
-                    )}
+                      ));
+                    })()}
                   </div>
                 </div>
               )}
@@ -509,7 +597,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* MESSAGING OVERLAY: Modern Backdrop Blur Glassmorphism Card with User List + Chat + BizBot AI */}
               {isMessagesOpen && (
-                <div className="fixed sm:absolute inset-x-0 bottom-0 sm:inset-auto sm:right-0 sm:top-14 w-full sm:w-[580px] md:w-[660px] h-[82vh] sm:h-auto sm:max-h-[540px] bg-slate-900/95 backdrop-blur-2xl border-t sm:border border-white/20 text-white shadow-2xl rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 z-50 pointer-events-auto animate-slide-up-bottom sm:animate-in sm:fade-in sm:zoom-in-95 font-sans text-left flex flex-col">
+                <div className="fixed sm:absolute inset-x-0 bottom-0 sm:inset-auto sm:right-0 sm:top-14 w-full sm:w-[680px] md:w-[760px] lg:w-[820px] h-[85vh] sm:h-[600px] bg-slate-900/95 backdrop-blur-2xl border-t sm:border border-white/20 text-white shadow-2xl rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 z-50 pointer-events-auto animate-slide-up-bottom sm:animate-in sm:fade-in sm:zoom-in-95 font-sans text-left flex flex-col">
                   {/* Top Bar Header */}
                   <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3 shrink-0">
                     <div className="flex items-center gap-2">
@@ -591,6 +679,9 @@ export const Header: React.FC<HeaderProps> = ({
                                 onClick={() => {
                                   setSelectedConvId(c.id);
                                   setMobileChatTab('chat');
+                                  // Reset so the ref-guard allows marking this new selection
+                                  lastMarkedRef.current = c.id;
+                                  onMarkConversationRead?.(c.id);
                                 }}
                                 className={`flex items-center gap-2.5 p-2.5 rounded-2xl border text-left transition-all w-full ${
                                   isSelected
@@ -679,7 +770,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </>
                   )}
 
-                  {/* ── TAB 2: BizBot AI Chat Tab ── */}
+                  {/* ΓöÇΓöÇ TAB 2: BizBot AI Chat Tab ΓöÇΓöÇ */}
                   {overlayChatTab === 'bot' && (
                     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                       {/* Bot Message History Stream */}
@@ -887,7 +978,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Primary View Navigation Tabs — hidden on full-screen pages */}
+        {/* Primary View Navigation Tabs ΓÇö hidden on full-screen pages */}
         <div className={`relative sm:flex items-center border-t border-slate-100/80 pt-2 pb-1.5 w-full min-w-0 overflow-hidden ${isFullScreen ? 'hidden' : 'hidden sm:flex'}`}>
           {canNavScrollLeft && (
             <button

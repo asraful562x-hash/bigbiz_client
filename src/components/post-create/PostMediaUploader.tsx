@@ -221,7 +221,7 @@ export const PostMediaUploader: React.FC<PostMediaUploaderProps> = ({
               {/* Media Type Badge */}
               <span className="absolute bottom-1.5 left-1.5 bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1">
                 {item.type === 'video' ? <Film className="w-2.5 h-2.5 text-rose-400" /> : <ImageIcon className="w-2.5 h-2.5 text-indigo-400" />}
-                <span>{item.type === 'video' ? 'Reel' : 'Photo'}</span>
+                <span>{item.type === 'video' ? 'Video' : 'Photo'}</span>
               </span>
 
               {/* Remove Button */}

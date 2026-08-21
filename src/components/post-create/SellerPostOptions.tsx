@@ -49,13 +49,6 @@ const FORMAT_OPTIONS: { type: PostType; label: string; icon: React.FC<{ classNam
     color: 'border-amber-500 bg-amber-50/50 text-amber-700' 
   },
   { 
-    type: 'reel', 
-    label: 'Reel Demo', 
-    icon: Film, 
-    desc: 'Short video or craft showcase', 
-    color: 'border-rose-500 bg-rose-50/50 text-rose-700' 
-  },
-  { 
     type: 'wholesale', 
     label: 'Wholesale Lot', 
     icon: Boxes, 

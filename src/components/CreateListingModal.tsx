@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { User, MarketplaceCategory, ProductCondition, ProductVariant, ProductFeature, ProductOptionSection } from '../types';
 import { X, Store, FolderPlus, Plus, Check, Sliders, Trash2 } from 'lucide-react';
+import { ConfirmModal } from './ConfirmModal';
 
 import { ImageGalleryUploader } from './listing-create/ImageGalleryUploader';
 import { VariantManager } from './listing-create/VariantManager';
@@ -16,9 +17,10 @@ interface CreateListingModalProps {
     description: string;
     category: MarketplaceCategory;
     storeCategory: string;
-    condition: ProductCondition;
+    condition?: ProductCondition;
     price: number;
     originalPrice?: number;
+    discountPercent?: number;
     variants?: ProductVariant[];
     features?: ProductFeature[];
     optionSections?: ProductOptionSection[];
@@ -30,14 +32,35 @@ interface CreateListingModalProps {
     tags: string[];
   }) => void;
   onAddCategory?: (categoryName: string) => void;
+  onNavigateToPaymentSettings?: () => void;
 }
 
 export const CreateListingModal: React.FC<CreateListingModalProps> = ({
   currentUser,
   onClose,
   onSubmitListing,
-  onAddCategory
+  onAddCategory,
+  onNavigateToPaymentSettings
 }) => {
+  const [isPaymentConfigured, setIsPaymentConfigured] = useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    const checkPaymentMethod = async () => {
+      try {
+        const numUserId = parseInt(currentUser.id.replace(/\D/g, ''), 10) || 1;
+        const res = await fetch(`/api/payment/settings?user_id=${numUserId}`);
+        if (res.ok) {
+          const json = await res.json();
+          setIsPaymentConfigured(Boolean(json.configured));
+        } else {
+          setIsPaymentConfigured(false);
+        }
+      } catch {
+        setIsPaymentConfigured(false);
+      }
+    };
+    checkPaymentMethod();
+  }, [currentUser.id]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<MarketplaceCategory>('new_products');
@@ -52,16 +75,14 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryError, setCategoryError] = useState<string | null>(null);
 
-  const [condition, setCondition] = useState<ProductCondition>('new');
   const [price, setPrice] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
   const [rentalPeriod, setRentalPeriod] = useState<'per_day' | 'per_week'>('per_day');
   const [wholesaleMinQty, setWholesaleMinQty] = useState('');
   
-  // Multi-image list
-  const [images, setImages] = useState<string[]>([
-    'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80'
-  ]);
+  // Multi-image list — start empty so only user's actual uploads appear
+  const [images, setImages] = useState<string[]>([]);
   
   const [location, setLocation] = useState(currentUser.location || 'Austin, TX');
   const [stockQty, setStockQty] = useState('10');
@@ -101,14 +122,10 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
   // Add Storefront Category
   const handleAddNewStoreCategory = () => {
     if (!newCategoryName.trim()) {
-      setCategoryError('Category name cannot be empty');
+      setCategoryError('Please type a category name first');
       return;
     }
     const cleanName = newCategoryName.trim();
-    if (currentUser.customCategories?.includes(cleanName)) {
-      setCategoryError('This category already exists');
-      return;
-    }
     if (onAddCategory) {
       onAddCategory(cleanName);
     }
@@ -118,13 +135,34 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
     setCategoryError(null);
   };
 
+  const [showMissingImageModal, setShowMissingImageModal] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !price || !description) return;
 
-    if (images.length === 0) {
-      alert('Please add at least 1 photo for your listing.');
+    if (isPaymentConfigured === false) {
+      alert('Please connect your Chain Hook payment method in Settings before listing products for sale.');
+      if (onNavigateToPaymentSettings) {
+        onClose();
+        onNavigateToPaymentSettings();
+      }
       return;
+    }
+
+    if (images.length === 0) {
+      setShowMissingImageModal(true);
+      return;
+    }
+
+    // Auto-create category if seller typed a new one but didn't click "Add" button
+    let finalStoreCategory = storeCategory || 'General Collection';
+    if (isCreatingNewCategory && newCategoryName.trim()) {
+      const cleanName = newCategoryName.trim();
+      finalStoreCategory = cleanName;
+      if (onAddCategory) {
+        onAddCategory(cleanName);
+      }
     }
 
     setIsSubmitting(true);
@@ -133,10 +171,11 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         title,
         description,
         category,
-        storeCategory: storeCategory || 'General Collection',
-        condition,
+        storeCategory: finalStoreCategory,
+        condition: 'new',
         price: Number(price),
         originalPrice: originalPrice ? Number(originalPrice) : undefined,
+        discountPercent: discountPercent && Number(discountPercent) >= 1 && Number(discountPercent) <= 99 ? Number(discountPercent) : undefined,
         variants: variants.length > 0 ? variants : undefined,
         features: features.length > 0 ? features : undefined,
         optionSections: optionSections.length > 0 ? optionSections : undefined,
@@ -184,6 +223,41 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         {/* ── 2. LAYER: ISOLATED SCROLLABLE FORM BODY ── */}
         <form id="createListingForm" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           
+          {/* Payment Method Guard Banner */}
+          {isPaymentConfigured === false && (
+            <div className="p-4 rounded-2xl border-2 border-amber-300 bg-amber-50/90 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white border border-amber-200 p-1 flex items-center justify-center shrink-0">
+                  <img
+                    src="https://res.cloudinary.com/ecxs6pgw/image/upload/v1783354359/logo_acvlmj.png"
+                    alt="Chain Hook Logo"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                    ⚠️ Chain Hook Payment Method Required
+                  </h4>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    You must connect your Chain Hook merchant credentials (Client Name & API Key) in Settings before you can list products for sale.
+                  </p>
+                </div>
+              </div>
+              {onNavigateToPaymentSettings && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onNavigateToPaymentSettings();
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+                >
+                  Configure in Settings →
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Multi-Photo Gallery */}
           <ImageGalleryUploader images={images} setImages={setImages} />
 
@@ -218,7 +292,7 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
             </div>
           </div>
 
-          {/* Category, Condition & Base Price */}
+          {/* Category, Base Price & Discount % (1-99) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Marketplace Category</label>
@@ -236,27 +310,13 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Condition</label>
-              <select
-                value={condition}
-                onChange={(e) => setCondition(e.target.value as ProductCondition)}
-                className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
-              >
-                <option value="new">New</option>
-                <option value="used">Used</option>
-                <option value="refurbished">Refurbished</option>
-                <option value="service">Service</option>
-                <option value="rental">Rental Item</option>
-              </select>
-            </div>
-
-            <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Base Price ($) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
                 required
+                min="0.01"
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -264,6 +324,142 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
                 className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-bold"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>Discount %</span>
+                <span className="text-[10px] text-indigo-600 font-bold">Range: 1 - 99%</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="99"
+                  step="1"
+                  value={discountPercent}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setDiscountPercent('');
+                      return;
+                    }
+                    const num = parseInt(val, 10);
+                    if (num < 1) setDiscountPercent('1');
+                    else if (num > 99) setDiscountPercent('99');
+                    else setDiscountPercent(String(num));
+                  }}
+                  placeholder="e.g. 15"
+                  className="w-full text-xs px-3.5 py-2.5 pr-8 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-bold text-indigo-700"
+                />
+                <span className="absolute right-3 top-2.5 text-xs font-black text-slate-400 pointer-events-none">%</span>
+              </div>
+              {price && Number(price) > 0 && discountPercent && Number(discountPercent) >= 1 && Number(discountPercent) <= 99 && (
+                <p className="text-[10px] text-emerald-600 font-extrabold mt-1">
+                  Final: ${(Number(price) * (1 - Number(discountPercent) / 100)).toFixed(2)} (Save {discountPercent}%)
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── STOREFRONT CATEGORY & CATEGORY CREATOR ── */}
+          <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Store className="w-4 h-4 text-indigo-600 shrink-0" />
+                <div>
+                  <h4 className="text-xs font-bold text-indigo-950">Storefront Category / Collection</h4>
+                  <p className="text-[10px] text-indigo-600 font-medium">
+                    Organize your product inside your profile store under a specific category
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-indigo-200 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingNewCategory(false)}
+                  className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                    !isCreatingNewCategory ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Select Category
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingNewCategory(true)}
+                  className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    isCreatingNewCategory ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Create New</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Mode 1: Select Existing Category */}
+            {!isCreatingNewCategory ? (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from(new Set(['General Collection', ...(currentUser.customCategories || [])])).map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setStoreCategory(cat)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
+                        storeCategory === cat
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-white text-slate-700 border-indigo-200/80 hover:bg-indigo-50'
+                      }`}
+                    >
+                      {storeCategory === cat && <Check className="w-3.5 h-3.5" />}
+                      <span>{cat}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Selected Category: <span className="font-extrabold text-indigo-700">{storeCategory || 'General Collection'}</span>
+                </p>
+              </div>
+            ) : (
+              /* Mode 2: Category Creator (Create and assign new category on the fly) */
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => {
+                      setNewCategoryName(e.target.value);
+                      setCategoryError(null);
+                    }}
+                    placeholder="New category name (e.g. Mechanical Keyboards, Winter Specials, Artisan Crafts)"
+                    className="flex-1 text-xs px-3.5 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:border-indigo-500 font-medium"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddNewStoreCategory();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewStoreCategory}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>Add Category</span>
+                  </button>
+                </div>
+                {categoryError && (
+                  <p className="text-[11px] font-bold text-rose-600">{categoryError}</p>
+                )}
+                {storeCategory && (
+                  <p className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    <span>Will be assigned to category: "{storeCategory}"</span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Dynamic Product Variants */}
@@ -331,28 +527,16 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
             </div>
           </div>
 
-          {/* Location & Tags */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Dispatch / Pickup Location</label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Austin, TX"
-                className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Search Keywords / Hashtags</label>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="e.g. furniture, tech, wholesale"
-                className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-              />
-            </div>
+          {/* Search Keywords / Tags */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Search Keywords / Hashtags</label>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="e.g. furniture, tech, wholesale, handmade"
+              className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+            />
           </div>
 
         </form>
@@ -378,6 +562,18 @@ export const CreateListingModal: React.FC<CreateListingModalProps> = ({
         </div>
 
       </div>
+
+      {/* Missing Image Notification Modal Overlay */}
+      <ConfirmModal
+        isOpen={showMissingImageModal}
+        title="Photo Required"
+        message="Please add at least 1 photo for your product or software listing to proceed."
+        confirmText="Got It"
+        cancelText="Close"
+        isDestructive={false}
+        onConfirm={() => setShowMissingImageModal(false)}
+        onCancel={() => setShowMissingImageModal(false)}
+      />
     </div>
   );
 };

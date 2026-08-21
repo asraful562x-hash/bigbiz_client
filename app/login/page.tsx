@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import './login.css';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://bigbiz-backend.onrender.com';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');

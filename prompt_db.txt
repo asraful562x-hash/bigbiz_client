@@ -1,0 +1,224 @@
+# ==============================================================================
+# BIZSOCIAL / BIGBIZ DATABASE ARCHITECTURE & FULL-STACK INTEGRATION PROMPT
+# ==============================================================================
+# This document serves as the master specification for AI models and developers 
+# building, integrating, and maintaining the Product Catalog, Category, Variant, 
+# and Modifier Ecosystem in the BigBiz application.
+# ==============================================================================
+
+---
+
+## 1. DATABASE SCHEMA & CASCADE DELETE CONSTRAINTS
+
+All child tables in PostgreSQL have explicit `OnDelete:CASCADE` and `OnUpdate:CASCADE` constraints configured. Deleting a parent `Product` (or parent `ProductCustomOptionSection` / `ProductCustomOptionSubSection`) automatically cleans up and deletes all dependent rows across all relational tables.
+
+### Table 1: `products` (Product Core Table)
+- **Fields**:
+  - `id`: uint (Primary Key, Auto Increment)
+  - `user_id`: uint (Foreign Key -> `users.id`, Indexed)
+  - `title`: varchar(255) (Product Title / Listing Name, Not Null)
+  - `description`: text (Product Description)
+  - `price`: decimal(10,2) (Base Price, Not Null, Default: 0.00)
+  - `discount_rate`: decimal(5,2) (Discount Rate Percentage: 1.00 - 99.00, Default: 0.00)
+  - `create_date_time`: timestamp (`autoCreateTime`)
+  - `update_date_time`: timestamp (`autoUpdateTime`)
+
+```go
+type Product struct {
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID         uint      `gorm:"not null;index" json:"user_id"`
+	Title          string    `gorm:"type:varchar(255);not null" json:"title"`
+	Description    string    `gorm:"type:text" json:"description"`
+	Price          float64   `gorm:"type:decimal(10,2);not null;default:0.00" json:"price"`
+	DiscountRate   float64   `gorm:"type:decimal(5,2);default:0.00" json:"discount_rate"`
+	CreateDateTime time.Time `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time `gorm:"autoUpdateTime" json:"update_date_time"`
+
+	// Relational Associations (On Delete Cascade)
+	User                  User                            `gorm:"foreignKey:UserID;references:ID" json:"user,omitempty"`
+	MarketplaceCategories []ProductMarketplaceCategoryMap `gorm:"foreignKey:ProductID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"marketplace_categories,omitempty"`
+	UserCategories        []ProductUserBaseCategoryMap    `gorm:"foreignKey:ProductID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"user_categories,omitempty"`
+	Variants              []ProductVariant                `gorm:"foreignKey:ProductID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"variants,omitempty"`
+	OptionSections        []ProductCustomOptionSection    `gorm:"foreignKey:ProductID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"option_sections,omitempty"`
+	Keywords              []ProductKeyword                `gorm:"foreignKey:ProductID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"keywords,omitempty"`
+}
+```
+
+---
+
+### Table 2: `product_marketplace_categories` (Platform-Wide Categories)
+```go
+type ProductMarketplaceCategory struct {
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Category       string    `gorm:"type:varchar(150);not null;uniqueIndex" json:"category"`
+	CreateDateTime time.Time `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time `gorm:"autoUpdateTime" json:"update_date_time"`
+}
+```
+
+---
+
+### Table 3: `product_marketplace_category_maps` (Platform Category Mapping)
+```go
+type ProductMarketplaceCategoryMap struct {
+	ID             uint                       `gorm:"primaryKey;autoIncrement" json:"id"`
+	CategoryID     uint                       `gorm:"not null;index" json:"category_id"`
+	ProductID      uint                       `gorm:"not null;index" json:"product_id"`
+	CreateDateTime time.Time                  `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time                  `gorm:"autoUpdateTime" json:"update_date_time"`
+	Category       ProductMarketplaceCategory `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"category,omitempty"`
+}
+```
+
+---
+
+### Table 4: `product_user_base_categories` (Seller Storefront Categories)
+```go
+type ProductUserBaseCategory struct {
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID         uint      `gorm:"not null;index" json:"user_id"`
+	Category       string    `gorm:"type:varchar(150);not null" json:"category"`
+	CreateDateTime time.Time `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time `gorm:"autoUpdateTime" json:"update_date_time"`
+	User           User      `gorm:"foreignKey:UserID;references:ID" json:"user,omitempty"`
+}
+```
+
+---
+
+### Table 5: `product_user_base_category_maps` (Seller Storefront Category Mapping)
+```go
+type ProductUserBaseCategoryMap struct {
+	ID             uint                    `gorm:"primaryKey;autoIncrement" json:"id"`
+	CategoryID     uint                    `gorm:"not null;index" json:"category_id"`
+	ProductID      uint                    `gorm:"not null;index" json:"product_id"`
+	CreateDateTime time.Time               `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time               `gorm:"autoUpdateTime" json:"update_date_time"`
+	Category       ProductUserBaseCategory `gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"category,omitempty"`
+}
+```
+
+---
+
+### Table 6: `product_variants` (Product Variants)
+```go
+type ProductVariant struct {
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	ProductID      uint      `gorm:"not null;index" json:"product_id"`
+	Name           string    `gorm:"type:varchar(150);not null" json:"name"`
+	Price          float64   `gorm:"type:decimal(10,2);default:0.00" json:"price"`
+	Qty            int       `gorm:"default:1" json:"qty"`
+	IsDefault      bool      `gorm:"default:false" json:"is_default"`
+	CreateDateTime time.Time `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time `gorm:"autoUpdateTime" json:"update_date_time"`
+}
+```
+
+---
+
+### Table 7: `product_custom_option_sections` (PCOSS)
+```go
+type ProductCustomOptionSection struct {
+	ID             uint                            `gorm:"primaryKey;autoIncrement" json:"id"`
+	ProductID      uint                            `gorm:"not null;index" json:"product_id"`
+	Name           string                          `gorm:"type:varchar(150);not null" json:"name"`
+	Require        bool                            `gorm:"default:false" json:"require"`
+	CreateDateTime time.Time                       `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time                       `gorm:"autoUpdateTime" json:"update_date_time"`
+	SubSections    []ProductCustomOptionSubSection `gorm:"foreignKey:PCOSSID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"sub_sections,omitempty"`
+}
+```
+
+---
+
+### Table 8: `product_custom_option_sub_sections` (PCOSSS)
+```go
+type ProductCustomOptionSubSection struct {
+	ID             uint                                  `gorm:"primaryKey;autoIncrement" json:"id"`
+	PCOSSID        uint                                  `gorm:"column:pcoss_id;not null;index" json:"pcoss_id"`
+	Name           string                                `gorm:"type:varchar(150);not null" json:"name"`
+	CreateDateTime time.Time                             `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time                             `gorm:"autoUpdateTime" json:"update_date_time"`
+	Options        []ProductCustomOptionSubSectionOption `gorm:"foreignKey:PCOSSSID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"options,omitempty"`
+}
+```
+
+---
+
+### Table 9: `product_custom_option_sub_section_options` (PCOSSSO)
+```go
+type ProductCustomOptionSubSectionOption struct {
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	PCOSSSID       uint      `gorm:"column:pcosss_id;not null;index" json:"pcosss_id"`
+	Name           string    `gorm:"type:varchar(150);not null" json:"name"`
+	Price          float64   `gorm:"type:decimal(10,2);default:0.00" json:"price"`
+	IsDefault      bool      `gorm:"default:false" json:"is_default"`
+	CreateDateTime time.Time `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time `gorm:"autoUpdateTime" json:"update_date_time"`
+}
+```
+
+---
+
+### Table 10: `product_keywords` (Search Indexing Keywords)
+```go
+type ProductKeyword struct {
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	ProductID      uint      `gorm:"not null;index" json:"product_id"`
+	Name           string    `gorm:"type:varchar(100);not null;index" json:"name"`
+	CreateDateTime time.Time `gorm:"autoCreateTime" json:"create_date_time"`
+	UpdateDateTime time.Time `gorm:"autoUpdateTime" json:"update_date_time"`
+}
+```
+
+---
+
+## 2. DUAL-MODE IMAGE UPLOAD IN CLIENT FORM
+
+The product creation form (`src/components/listing-create/ImageGalleryUploader.tsx`) supports two methods for adding images:
+
+1. **Local File Input (Browse & Drag/Drop)**:
+   - Accepts PNG, JPG, WEBP formats (multiple files supported).
+   - Reads files as base64 and pre-uploads directly to Cloudinary via `POST /api/posts/upload`.
+   - Displays animated spinner during CDN upload and displays thumbnail when done.
+
+2. **Web URL Input**:
+   - Accepts any external image URL (e.g. Unsplash, CDN, Shopify).
+   - Direct inclusion with "Enter" key shortcut.
+
+3. **Gallery Management**:
+   - First image automatically becomes the primary cover.
+   - Any thumbnail can be promoted to cover via "Make Cover" button or removed via "Delete" button.
+
+---
+
+## 3. CRUD API SUMMARY
+
+- `POST /api/products`: Creates product + category maps + variants + option sections + keywords.
+- `GET /api/products`: Returns products with full preloads. Supports `?user_id=X` & `?search=term`.
+- `GET /api/products/:id`: Returns single product.
+- `PUT /api/products/:id`: Updates product fields and re-syncs relations.
+- `DELETE /api/products/:id`: Deletes parent product; PostgreSQL cascade automatically removes all child mappings, variants, options, and keywords.
+
+
+
+
+
+user inbox list 
+ID
+initaltor_id
+participator_id
+create_date_time
+update_date_time
+
+
+
+user Message itemlist
+id
+sender_id
+receiver_id
+message
+list_of_attsment
+create_date_time
+update_date_time
+

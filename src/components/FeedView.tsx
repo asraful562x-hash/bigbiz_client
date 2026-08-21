@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User, Post, Story, Listing } from '../types';
 import { useScrollOverflow } from '../hooks/useScrollOverflow';
+import { ConfirmModal } from './ConfirmModal';
 import { 
   Heart, 
   MessageCircle, 
@@ -16,7 +17,8 @@ import {
   Send,
   MoreHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 
 interface FeedViewProps {
@@ -31,6 +33,8 @@ interface FeedViewProps {
   onOpenCreateStory: () => void;
   onViewStory: (story: Story) => void;
   onOpenSellerProfile: (sellerId: string) => void;
+  onDeletePost?: (postId: string) => void;
+  isLoading?: boolean;
 }
 
 export const FeedView: React.FC<FeedViewProps> = ({
@@ -44,17 +48,47 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onOpenCreatePost,
   onOpenCreateStory,
   onViewStory,
-  onOpenSellerProfile
+  onOpenSellerProfile,
+  onDeletePost,
+  isLoading = false
 }) => {
-  const [activeFeedFilter, setActiveFeedFilter] = useState<'all' | 'product' | 'reel'>('all');
+  const [activeFeedFilter, setActiveFeedFilter] = useState<'all' | 'product'>('all');
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
+
+  // Infinite Scroll State
+  const [visibleCount, setVisibleCount] = useState<number>(6);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const storiesScrollRef = useRef<HTMLDivElement>(null);
   const filterScrollRef = useRef<HTMLDivElement>(null);
 
   const { canScrollLeft: canStoriesScrollLeft, canScrollRight: canStoriesScrollRight } = useScrollOverflow(storiesScrollRef);
   const { canScrollLeft: canFilterScrollLeft, canScrollRight: canFilterScrollRight } = useScrollOverflow(filterScrollRef);
+
+  // Infinite scroll intersection observer: continuously cycles and loads random post batches seamlessly
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => prev + 6);
+            setIsLoadingMore(false);
+          }, 350);
+        }
+      },
+      { rootMargin: '500px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isLoadingMore]);
 
   const scrollStories = (direction: 'left' | 'right') => {
     if (storiesScrollRef.current) {
@@ -74,10 +108,49 @@ export const FeedView: React.FC<FeedViewProps> = ({
     }
   };
 
-  const filteredPosts = posts.filter(p => {
-    if (activeFeedFilter === 'all') return true;
-    return p.postType === activeFeedFilter;
-  });
+  // Social Media Feed Ranking Algorithm:
+  // Score = (Likes*1 + Comments*4 + Shares*6) / (hoursSincePost + 2)^1.5
+  const computeClientPostScore = (p: Post): number => {
+    const engagement = (p.likesCount || 0) * 1 + (p.commentsCount || 0) * 4 + (p.sharesCount || 0) * 6;
+    let hoursOld = 0.5; // default for 'Just now'
+    if (p.createdAt && p.createdAt !== 'Just now') {
+      const parsedDate = new Date(p.createdAt);
+      if (!isNaN(parsedDate.getTime())) {
+        hoursOld = Math.max(0, (Date.now() - parsedDate.getTime()) / (1000 * 60 * 60));
+      }
+    }
+    const decay = Math.pow(hoursOld + 2, 1.5);
+    return engagement / decay;
+  };
+
+  const allFilteredPosts = posts
+    .filter(p => {
+      if (activeFeedFilter === 'all') return true;
+      return p.postType === activeFeedFilter;
+    })
+    .slice()
+    .sort((a, b) => {
+      const scoreA = computeClientPostScore(a);
+      const scoreB = computeClientPostScore(b);
+      return scoreB - scoreA;
+    });
+
+  // Endless Looping / Random Cycle: If visibleCount exceeds pool, loop through items continuously
+  const visiblePosts = React.useMemo(() => {
+    if (allFilteredPosts.length === 0) return [];
+    if (visibleCount <= allFilteredPosts.length) {
+      return allFilteredPosts.slice(0, visibleCount);
+    }
+    // Generate looped stream so scrolling never hits a dead end
+    const stream: Post[] = [];
+    for (let i = 0; i < visibleCount; i++) {
+      const basePost = allFilteredPosts[i % allFilteredPosts.length];
+      const cycleIndex = Math.floor(i / allFilteredPosts.length);
+      stream.push(cycleIndex === 0 ? basePost : { ...basePost, id: `${basePost.id}_cycle_${cycleIndex}` });
+    }
+    return stream;
+  }, [allFilteredPosts, visibleCount]);
+
 
   const handleCommentSubmit = (postId: string, e: React.FormEvent) => {
     e.preventDefault();
@@ -115,44 +188,61 @@ export const FeedView: React.FC<FeedViewProps> = ({
             ref={storiesScrollRef}
             className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar scroll-smooth flex-1 min-w-0"
           >
-            {/* Add Story Button for Sellers */}
-            {(currentUser.role === 'seller_free' || currentUser.role === 'seller_premium') && (
-              <div 
-                onClick={onOpenCreateStory}
-                className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
-              >
-                <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-dashed border-indigo-400 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-50 transition-all relative">
-                  <Plus className="w-6 h-6" />
-                  <span className="absolute -bottom-1 bg-indigo-600 text-white rounded-full p-0.5 shadow-xs">
-                    <Plus className="w-3 h-3" />
-                  </span>
+            {isLoading ? (
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex items-center gap-2 px-2 text-slate-500 text-xs shrink-0">
+                  <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <span className="font-semibold text-[11px] text-slate-600">Please wait, loading stories…</span>
                 </div>
-                <span className="text-[11px] font-semibold text-slate-700">Your Story</span>
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex flex-col items-center gap-1 shrink-0 animate-pulse">
+                    <div className="w-15 h-15 rounded-full bg-slate-200" />
+                    <div className="w-10 h-2 bg-slate-200 rounded" />
+                  </div>
+                ))}
               </div>
-            )}
+            ) : (
+              <>
+                {/* Add Story Button for Sellers */}
+                {(currentUser.role === 'seller_free' || currentUser.role === 'seller_premium') && (
+                  <div 
+                    onClick={onOpenCreateStory}
+                    className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-slate-100 border-2 border-dashed border-indigo-400 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-50 transition-all relative">
+                      <Plus className="w-6 h-6" />
+                      <span className="absolute -bottom-1 bg-indigo-600 text-white rounded-full p-0.5 shadow-xs">
+                        <Plus className="w-3 h-3" />
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-700">Your Story</span>
+                  </div>
+                )}
 
-            {/* Stories List */}
-            {stories.map((story) => (
-              <div
-                key={story.id}
-                onClick={() => onViewStory(story)}
-                className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
-              >
-                <div className="p-0.5 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 group-hover:scale-105 transition-transform shadow-xs">
-                  <img
-                    src={story.sellerAvatar}
-                    alt={story.sellerName}
-                    className="w-15 h-15 rounded-full object-cover border-2 border-white"
-                  />
-                </div>
-                <div className="flex items-center gap-0.5">
-                  <span className="text-[11px] font-medium text-slate-800 truncate max-w-[70px]">
-                    {story.sellerName.split(' ')[0]}
-                  </span>
-                  {story.isVerifiedSeller && <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />}
-                </div>
-              </div>
-            ))}
+                {/* Stories List */}
+                {stories.map((story) => (
+                  <div
+                    key={story.id}
+                    onClick={() => onViewStory(story)}
+                    className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group"
+                  >
+                    <div className="p-0.5 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 group-hover:scale-105 transition-transform shadow-xs">
+                      <img
+                        src={story.sellerAvatar}
+                        alt={story.sellerName}
+                        className="w-15 h-15 rounded-full object-cover border-2 border-white"
+                      />
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-[11px] font-medium text-slate-800 truncate max-w-[70px]">
+                        {story.sellerName.split(' ')[0]}
+                      </span>
+                      {story.isVerifiedSeller && <CheckCircle2 className="w-3 h-3 text-sky-500 shrink-0" />}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
 
           {canStoriesScrollRight && (
@@ -204,16 +294,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
             >
               <Tag className="w-3.5 h-3.5 shrink-0" /> <span>Product Releases</span>
             </button>
-            <button
-              onClick={() => setActiveFeedFilter('reel')}
-              className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 shrink-0 ${
-                activeFeedFilter === 'reel'
-                  ? 'bg-rose-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Play className="w-3.5 h-3.5 fill-current shrink-0" /> <span>Short Demos / Reels</span>
-            </button>
           </div>
 
           {canFilterScrollRight && (
@@ -237,7 +317,42 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
       {/* 3. Feed Posts Stream */}
       <div className="space-y-4 pb-6">
-        {filteredPosts.map((post) => {
+        {isLoading ? (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-xs">
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-6 h-6 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin" />
+                <span className="font-bold text-slate-800 text-sm tracking-wide">Please wait, loading feed updates…</span>
+              </div>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">Syncing latest B2B marketplace posts, verified listings, and social signals.</p>
+            </div>
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-200" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-3 bg-slate-200 rounded w-1/4" />
+                    <div className="h-2 bg-slate-100 rounded w-1/6" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3.5 bg-slate-100 rounded w-full" />
+                  <div className="h-3.5 bg-slate-100 rounded w-4/5" />
+                </div>
+                <div className="h-48 bg-slate-100 rounded-xl w-full" />
+              </div>
+            ))}
+          </div>
+        ) : visiblePosts.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 shadow-xs">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-6 h-6 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin" />
+              <span className="font-bold text-slate-800 text-sm tracking-wide">Please wait, loading feed updates…</span>
+            </div>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">Syncing latest B2B marketplace posts, verified listings, and social signals.</p>
+          </div>
+        ) : null}
+        {!isLoading && visiblePosts.map((post) => {
           const linkedListing = post.listingId 
             ? listings.find(l => l.id === post.listingId) 
             : null;
@@ -288,9 +403,21 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   </div>
                 </div>
 
-                <button className="text-slate-400 hover:text-slate-600 p-1 shrink-0">
-                  <MoreHorizontal className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  {(post.sellerId === currentUser.id || post.sellerName === currentUser.name) && onDeletePost && (
+                    <button
+                      type="button"
+                      onClick={() => setPostToDelete(post.id)}
+                      className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Post"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button className="text-slate-400 hover:text-slate-600 p-1 shrink-0">
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Promotional Badge Banner (if present) */}
@@ -446,7 +573,36 @@ export const FeedView: React.FC<FeedViewProps> = ({
             </article>
           );
         })}
+
+        {/* Infinite Scroll Sentinel: intersection observer watches this to trigger more posts */}
+        <div ref={sentinelRef} className="py-1" aria-hidden="true" />
+
+        {/* Loading indicator while fetching next batch */}
+        {isLoadingMore && (
+          <div className="flex items-center justify-center gap-3 py-6">
+            <div className="w-5 h-5 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
+            <span className="text-xs text-slate-400 font-medium">Fetching more updates…</span>
+          </div>
+        )}
+
       </div>{/* end posts list */}
+
+      {/* Modern Delete Confirmation Overlay Modal */}
+      <ConfirmModal
+        isOpen={Boolean(postToDelete)}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? This will permanently delete its attached media and remove it from the feed."
+        confirmText="Delete Post"
+        cancelText="Cancel"
+        isDestructive={true}
+        onConfirm={() => {
+          if (postToDelete && onDeletePost) {
+            onDeletePost(postToDelete);
+          }
+          setPostToDelete(null);
+        }}
+        onCancel={() => setPostToDelete(null)}
+      />
 
     </div>
   );

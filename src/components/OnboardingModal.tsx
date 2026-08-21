@@ -28,7 +28,7 @@ interface OnboardingModalProps {
   onComplete: (updatedUser: User) => void;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://bigbiz-backend.onrender.com';
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ initialUser, onComplete }) => {
   const [fullName, setFullName] = useState(initialUser.name || '');
