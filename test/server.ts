@@ -14,7 +14,7 @@ import {
   INITIAL_REVIEWS, 
   INITIAL_DISPUTES,
   INITIAL_ANALYTICS
-} from "./src/data/mockData";
+} from "../src/data/mockData";
 import { 
   User, 
   Listing, 
@@ -26,9 +26,9 @@ import {
   AppNotification, 
   Review, 
   Dispute 
-} from "./src/types";
+} from "../src/types";
 
-import { seedDatabaseUsers } from "./server/dbSeeder";
+import { seedDatabaseUsers } from "../server/dbSeeder";
 
 async function startServer() {
   const app = express();
