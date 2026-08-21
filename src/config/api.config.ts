@@ -9,7 +9,7 @@ export const API_CONFIG = {
   // Base URLs
   BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://bigbiz-backend.onrender.com/api',
   SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'https://bigbiz-backend.onrender.com',
-  CLIENT_URL: process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000',
+  CLIENT_URL: process.env.NEXT_PUBLIC_CLIENT_URL || 'https://bigbiz-client.vercel.app',
 
   // Payment & External Gateways
   EWALLET_GATEWAY_URL: process.env.NEXT_PUBLIC_EWALLET_GATEWAY_URL || 'https://lyren-client.vercel.app',
